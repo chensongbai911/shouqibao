@@ -31,7 +31,7 @@
       src="{{useCustomFace ? customFaceUrl : '/images/bag_normal.png'}}"
       mode="{{useCustomFace ? 'aspectFill' : 'aspectFit'}}"
       bindtap="onBagTap"
-      catch:touchstart="onTouchStart"
+      bind:touchstart="onTouchStart"
     />
 
     <!-- 昏迷星星特效 -->
