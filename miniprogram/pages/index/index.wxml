@@ -1,0 +1,103 @@
+<!--index.wxml-->
+<view class="container {{darkMode ? 'dark-mode' : ''}}">
+  <!-- 顶部分数显示 -->
+  <view class="score-display">
+    <view class="score-label">总伤害</view>
+    <view class="score-value">{{totalScore}}</view>
+    <view wx:if="{{comboCount > 2}}" class="combo-counter">
+      连击 x{{comboCount}}
+    </view>
+  </view>
+
+  <!-- 暴怒模式指示器 -->
+  <view wx:if="{{rageMode}}" class="rage-indicator">
+    🔥 暴怒模式 🔥
+  </view>
+
+  <!-- 暗黑模式切换按钮 -->
+  <view class="settings-button" bindtap="toggleDarkMode">
+    <text>{{darkMode ? '☀️' : '🌙'}}</text>
+  </view>
+
+  <!-- BGM控制按钮 -->
+  <view class="bgm-control" bindtap="toggleBGM">
+    <text class="bgm-icon">{{bgmPlaying ? '🔊' : '🔇'}}</text>
+  </view>
+
+  <!-- 受气包主体 -->
+  <view class="bag-container">
+    <image
+      class="bag-image {{bagShaking ? 'shaking' : ''}} expression-{{bagExpression}}"
+      src="{{useCustomFace ? customFaceUrl : '/images/bag_' + bagExpression + '.png'}}"
+      mode="{{useCustomFace ? 'aspectFill' : 'aspectFit'}}"
+      bindtap="onBagTap"
+      catch:touchstart="onTouchStart"
+    />
+
+    <!-- 昏迷星星特效 -->
+    <view wx:if="{{bagExpression === 'dizzy'}}" class="dizzy-stars">
+      <text class="star">⭐</text>
+      <text class="star">⭐</text>
+      <text class="star">⭐</text>
+    </view>
+
+    <!-- 粒子特效容器 -->
+    <view class="particles-container">
+      <view
+        wx:for="{{particles}}"
+        wx:key="id"
+        class="particle"
+        style="left: {{item.x}}px; top: {{item.y}}px; width: {{item.size}}rpx; height: {{item.size}}rpx; background: {{item.color}}; --tx: {{item.vx}}rpx; --ty: {{item.vy}}rpx; transform: rotate({{item.rotation}}deg);">
+      </view>
+    </view>
+
+    <!-- 伤害飘字容器 -->
+    <view class="damage-texts-container">
+      <view
+        wx:for="{{damageTexts}}"
+        wx:key="id"
+        class="damage-text {{item.isCrit ? 'crit' : 'normal'}}"
+        style="left: {{item.x}}px; top: {{item.y}}px;">
+        {{item.isCrit ? 'CRIT! ' : ''}}{{item.value}}
+      </view>
+    </view>
+  </view>
+
+  <!-- 武器信息显示 -->
+  <view class="weapon-info">
+    <view class="weapon-name">
+      {{currentWeapon.icon}} {{currentWeapon.name}}
+    </view>
+    <view class="weapon-damage">
+      伤害: {{currentWeapon.damage}}
+    </view>
+  </view>
+
+  <!-- 武器选择区域 -->
+  <view class="weapons-section">
+    <view class="section-title">选择武器</view>
+    <view class="weapons-grid">
+      <view
+        wx:for="{{weapons}}"
+        wx:key="id"
+        class="weapon-card {{currentWeapon.id === item.id ? 'active' : ''}} {{item.unlockScore > totalScore ? 'locked' : ''}}"
+        bindtap="switchWeapon"
+        data-id="{{item.id}}">
+        <view class="weapon-icon">{{item.icon}}</view>
+        <view class="weapon-name-text">{{item.name}}</view>
+        <view class="weapon-damage-text">{{item.damage}}</view>
+        <view wx:if="{{item.unlockScore > totalScore}}" class="weapon-unlock-hint">
+          需要 {{item.unlockScore}} 分
+        </view>
+        <text wx:if="{{item.unlockScore > totalScore}}" class="lock-icon">🔒</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 底部操作按钮 -->
+  <view class="controls">
+    <button class="control-btn" bindtap="chooseCustomFace">换脸</button>
+    <button class="control-btn" bindtap="resetFace">恢复</button>
+    <button class="control-btn primary" bindtap="resetScore">重置</button>
+  </view>
+</view>
