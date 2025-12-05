@@ -40,26 +40,26 @@
       <text class="star">⭐</text>
       <text class="star">⭐</text>
     </view>
+  </view>
 
-    <!-- 粒子特效容器 -->
-    <view class="particles-container">
-      <view
-        wx:for="{{particles}}"
-        wx:key="id"
-        class="particle"
-        style="left: {{item.x}}px; top: {{item.y}}px; width: {{item.size}}rpx; height: {{item.size}}rpx; background: {{item.color}}; --tx: {{item.vx}}rpx; --ty: {{item.vy}}rpx; transform: rotate({{item.rotation}}deg);">
-      </view>
+  <!-- 粒子特效容器（移到外面，覆盖整个屏幕） -->
+  <view class="particles-container">
+    <view
+      wx:for="{{particles}}"
+      wx:key="id"
+      class="particle"
+      style="left: {{item.x}}px; top: {{item.y}}px; width: {{item.size}}rpx; height: {{item.size}}rpx; background: {{item.color}}; --tx: {{item.vx}}rpx; --ty: {{item.vy}}rpx; transform: rotate({{item.rotation}}deg);">
     </view>
+  </view>
 
-    <!-- 伤害飘字容器 -->
-    <view class="damage-texts-container">
-      <view
-        wx:for="{{damageTexts}}"
-        wx:key="id"
-        class="damage-text {{item.isCrit ? 'crit' : 'normal'}}"
-        style="left: {{item.x}}px; top: {{item.y}}px;">
-        {{item.isCrit ? 'CRIT! ' : ''}}{{item.value}}
-      </view>
+  <!-- 伤害飘字容器（移到外面，覆盖整个屏幕） -->
+  <view class="damage-texts-container">
+    <view
+      wx:for="{{damageTexts}}"
+      wx:key="id"
+      class="damage-text {{item.isCrit ? 'crit' : 'normal'}}"
+      style="left: {{item.x}}px; top: {{item.y}}px;">
+      {{item.isCrit ? 'CRIT! ' : ''}}{{item.value}}
     </view>
   </view>
 
@@ -85,7 +85,7 @@
         data-id="{{item.id}}">
         <view class="weapon-icon">{{item.icon}}</view>
         <view class="weapon-name-text">{{item.name}}</view>
-        <view class="weapon-damage-text">{{item.damage}}</view>
+        <view class="weapon-damage-text">伤害: {{item.damage}}</view>
         <view wx:if="{{item.unlockScore > totalScore}}" class="weapon-unlock-hint">
           需要 {{item.unlockScore}} 分
         </view>
@@ -96,8 +96,8 @@
 
   <!-- 底部操作按钮 -->
   <view class="controls">
-    <button class="control-btn" bindtap="chooseCustomFace">换脸</button>
-    <button class="control-btn" bindtap="resetFace">恢复</button>
-    <button class="control-btn primary" bindtap="resetScore">重置</button>
+    <button class="control-btn" bindtap="chooseCustomFace">📷 换脸</button>
+    <button class="control-btn" bindtap="resetFace">↩️ 恢复</button>
+    <button class="control-btn primary" bindtap="resetScore">🔄 重置</button>
   </view>
 </view>
