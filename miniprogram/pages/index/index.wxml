@@ -28,7 +28,7 @@
   <view class="bag-container">
     <image
       class="bag-image {{bagShaking ? 'shaking' : ''}} expression-{{bagExpression}}"
-      src="{{useCustomFace ? customFaceUrl : '/images/bag_' + bagExpression + '.png'}}"
+      src="{{useCustomFace ? customFaceUrl : '/images/bag_normal.png'}}"
       mode="{{useCustomFace ? 'aspectFill' : 'aspectFit'}}"
       bindtap="onBagTap"
       catch:touchstart="onTouchStart"
