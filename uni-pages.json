@@ -1,4 +1,0 @@
-// 此文件是使用 `uni-read-pages` 自动生成的，请勿手动修改
-import pagesJson from './pages.json'
-
-export default pagesJson
