@@ -26,13 +26,19 @@
 
   <!-- 受气包主体 -->
   <view class="bag-container">
-    <image
-      class="bag-image {{bagShaking ? 'shaking' : ''}} expression-{{bagExpression}}"
-      src="{{useCustomFace ? customFaceUrl : '/images/bag_normal.png'}}"
-      mode="{{useCustomFace ? 'aspectFill' : 'aspectFit'}}"
-      bindtap="onBagTap"
-      bind:touchstart="onTouchStart"
-    />
+    <!-- 3D包装层 -->
+    <view class="bag-3d-wrapper {{bagShaking ? (bagExpression === 'crit' ? 'crit-hit' : 'hit-squash') : ''}}">
+      <image
+        class="bag-image {{bagShaking ? 'shaking' : ''}} expression-{{bagExpression}}"
+        src="{{useCustomFace ? customFaceUrl : '/images/bag_normal.png'}}"
+        mode="{{useCustomFace ? 'aspectFill' : 'aspectFit'}}"
+        bindtap="onBagTap"
+        bind:touchstart="onTouchStart"
+      />
+    </view>
+
+    <!-- 3D动态阴影 -->
+    <view class="bag-shadow {{bagShaking ? 'shadow-active' : ''}}"></view>
 
     <!-- 昏迷星星特效 -->
     <view wx:if="{{bagExpression === 'dizzy'}}" class="dizzy-stars">
