@@ -4,10 +4,10 @@
   ],
   "window": {
     "backgroundTextStyle": "light",
-    "navigationBarBackgroundColor": "#FF6B35",
+    "navigationBarBackgroundColor": "#6A52AE",
     "navigationBarTitleText": "受气包",
     "navigationBarTextStyle": "white",
-    "backgroundColor": "#FFD23F"
+    "backgroundColor": "#9B84E8"
   },
   "style": "v2",
   "sitemapLocation": "sitemap.json",

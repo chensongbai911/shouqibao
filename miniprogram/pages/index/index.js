@@ -3,25 +3,128 @@ const AudioPool = require('../../utils/audio_pool.js');
 
 Page({
   data: {
+    // 导航栏
+    statusBarHeight: 20,
+
     // 分数系统
     totalScore: 0,
+    todayScore: 0,      // 今日伤害
     comboCount: 0,
     comboTimer: null,
 
     // 武器系统
     currentWeapon: {
       id: 'hand',
-      name: '徒手',
+      name: '铁拳',
       damage: 10,
-      icon: '👋',
-      unlockScore: 0
+      icon: '👊',
+      unlockScore: 0,
+      rarity: 'common',        // 稀有度
+      attackStars: 1,          // 攻击力星级
+      speedStars: 3,           // 攻速星级
+      critStars: 1,            // 暴击星级
+      description: '最基础的武器，但永远可靠'
     },
     weapons: [
-      { id: 'hand', name: '徒手', damage: 10, icon: '👋', unlockScore: 0 },
-      { id: 'keyboard', name: '键盘', damage: 20, icon: '⌨️', unlockScore: 100 },
-      { id: 'hammer', name: '锤子', damage: 50, icon: '🔨', unlockScore: 500 },
-      { id: 'baseball', name: '棒球棍', damage: 100, icon: '⚾', unlockScore: 1000 }
+      {
+        id: 'hand', name: '铁拳', damage: 10, icon: '👊', unlockScore: 0,
+        rarity: 'common', attackStars: 1, speedStars: 3, critStars: 1,
+        description: '最基础的武器，但永远可靠',
+        color: '#9E9E9E'  // 普通灰
+      },
+      {
+        id: 'phone', name: '愤怒手机', damage: 15, icon: '📱', unlockScore: 50,
+        rarity: 'common', attackStars: 1, speedStars: 3, critStars: 2,
+        description: '摔了无数次依然坚挺',
+        color: '#2196F3'  // 蓝色
+      },
+      {
+        id: 'keyboard', name: '机械键盘', damage: 20, icon: '⌨️', unlockScore: 100,
+        rarity: 'uncommon', attackStars: 2, speedStars: 2, critStars: 2,
+        description: '程序员的愤怒之源',
+        color: '#4CAF50'  // 绿色
+      },
+      {
+        id: 'chair', name: '人体工学椅', damage: 30, icon: '🪑', unlockScore: 300,
+        rarity: 'uncommon', attackStars: 3, speedStars: 1, critStars: 2,
+        description: '久坐族的复仇武器',
+        color: '#4CAF50'
+      },
+      {
+        id: 'hammer', name: '正义之锤', damage: 50, icon: '🔨', unlockScore: 500,
+        rarity: 'rare', attackStars: 4, speedStars: 1, critStars: 3,
+        description: '一锤定音，气消云散',
+        color: '#9C27B0'  // 紫色
+      },
+      {
+        id: 'baseball', name: '全垒打棒', damage: 100, icon: '⚾', unlockScore: 1000,
+        rarity: 'epic', attackStars: 5, speedStars: 2, critStars: 4,
+        description: '送你一记本垒打！',
+        color: '#FF9800'  // 橙色
+      }
     ],
+    // 特殊武器（需要成就或分享解锁）- 传说级
+    specialWeapons: [
+      {
+        id: 'bomb', name: '怒火炸弹', damage: 150, icon: '💣',
+        unlockType: 'achievement', unlockCondition: '累计伤害5000', unlocked: false,
+        rarity: 'legendary', attackStars: 5, speedStars: 1, critStars: 5,
+        description: '爆发你所有的怒气！',
+        color: '#F44336'  // 红色
+      },
+      {
+        id: 'rocket', name: '出气火箭', damage: 200, icon: '🚀',
+        unlockType: 'share', unlockCondition: '分享3次', unlocked: false,
+        rarity: 'legendary', attackStars: 5, speedStars: 3, critStars: 4,
+        description: '让烦恼飞向太空',
+        color: '#F44336'
+      },
+      {
+        id: 'lightning', name: '雷神之怒', damage: 250, icon: '⚡',
+        unlockType: 'achievement', unlockCondition: '连击20次', unlocked: false,
+        rarity: 'legendary', attackStars: 5, speedStars: 5, critStars: 3,
+        description: '以闪电之速释放怒火',
+        color: '#F44336'
+      },
+      {
+        id: 'nuke', name: '终极核弹', damage: 500, icon: '☢️',
+        unlockType: 'achievement', unlockCondition: '累计伤害10000', unlocked: false,
+        rarity: 'mythic', attackStars: 5, speedStars: 1, critStars: 5,
+        description: '毁灭一切烦恼的终极武器',
+        color: '#FFD700'  // 金色
+      }
+    ],
+    // 武器面板状态
+    showWeaponPanel: false,
+    currentCardIndex: 0,      // 当前卡片索引（轮播用）
+
+    // 成就系统
+    showAchievementPanel: false,  // 荣誉墙面板
+    showAchievementUnlock: false, // 成就解锁动画
+    newAchievement: null,         // 新解锁的成就
+    unlockedAchievementCount: 0,  // 已解锁成就数量
+    achievements: [
+      { id: 'beginner', name: '初级出气侠', icon: '🥉', requirement: 100, description: '累计伤害100', unlocked: false },
+      { id: 'intermediate', name: '中级出气侠', icon: '🥈', requirement: 500, description: '累计伤害500', unlocked: false },
+      { id: 'advanced', name: '高级出气侠', icon: '🥇', requirement: 1000, description: '累计伤害1000', unlocked: false },
+      { id: 'warrior', name: '暴怒战士', icon: '🏆', requirement: 5000, description: '累计伤害5000', unlocked: false },
+      { id: 'king', name: '出气之王', icon: '👑', requirement: 10000, description: '累计伤害10000', unlocked: false },
+      { id: 'collector', name: '武器收藏家', icon: '⚔️', requirement: 3, description: '解锁3种武器', type: 'weapon', unlocked: false },
+      { id: 'arsenal', name: '军火大亨', icon: '🗡️', requirement: 6, description: '解锁6种武器', type: 'weapon', unlocked: false },
+      { id: 'combo10', name: '连击新手', icon: '🔥', requirement: 10, description: '达成10连击', type: 'combo', unlocked: false },
+      { id: 'combo20', name: '连击大师', icon: '⚡', requirement: 20, description: '达成20连击', type: 'combo', unlocked: false }
+    ],
+
+    // 分享卡片系统
+    showShareCard: false,       // 显示分享卡片
+    shareCardData: null,        // 分享卡片数据
+
+    // 设置菜单
+    showSettingsMenu: false,    // 设置弹出菜单
+
+    // 点击波纹特效
+    ripples: [],
+    nextRippleId: 0,
 
     // 表情系统
     bagExpression: 'normal',
@@ -34,9 +137,16 @@ Page({
     // UI模式
     darkMode: false,
     bgmPlaying: false,
+    showTapHint: true,  // 点击提示
 
     // 受击动画
     bagShaking: false,
+    btnPressed: false,        // 按钮按下状态
+    screenShaking: false,     // 屏幕震动
+    comboFlash: false,        // 连击闪光
+    showComboResult: false,   // 显示连击结算
+    comboResultText: '',      // 连击结算文字
+    comboDamageTotal: 0,      // 连击总伤害
 
     // 伤害飘字
     damageTexts: [],
@@ -49,7 +159,11 @@ Page({
 
     // 自定义头像
     useCustomFace: false,
-    customFaceUrl: ''
+    customFaceUrl: '',
+
+    // 长按连击
+    longPressTimer: null,
+    isLongPressing: false
   },
 
   audioPool: null,
@@ -62,8 +176,17 @@ Page({
   onLoad () {
     console.log('首页加载');
 
+    // 获取状态栏高度（用于自定义导航栏）
+    const systemInfo = wx.getSystemInfoSync();
+    this.setData({
+      statusBarHeight: systemInfo.statusBarHeight || 20
+    });
+
     // 初始化音频池
     this.audioPool = new AudioPool();
+
+    // 预加载表情图片（提升切换流畅度）
+    this.preloadExpressionImages();
 
     // 加载存储的数据
     this.loadGameData();
@@ -79,6 +202,20 @@ Page({
   },
 
   /**
+   * 预加载表情图片
+   */
+  preloadExpressionImages () {
+    const expressions = ['normal', 'hit', 'crit', 'dizzy'];
+    expressions.forEach(exp => {
+      const img = wx.getImageInfo({
+        src: `/images/bag_${exp}.png`,
+        success: () => console.log(`预加载成功: bag_${exp}.png`),
+        fail: (err) => console.warn(`预加载失败: bag_${exp}.png`, err)
+      });
+    });
+  },
+
+  /**
    * 加载游戏数据
    */
   loadGameData () {
@@ -86,14 +223,27 @@ Page({
     const currentWeaponId = wx.getStorageSync('currentWeapon') || 'hand';
     const customFaceUrl = wx.getStorageSync('customFaceUrl') || '';
 
+    // 加载今日伤害
+    const todayKey = this.getTodayKey();
+    const todayScore = wx.getStorageSync(todayKey) || 0;
+
     const currentWeapon = this.data.weapons.find(w => w.id === currentWeaponId) || this.data.weapons[0];
 
     this.setData({
       totalScore,
+      todayScore,
       currentWeapon,
       useCustomFace: !!customFaceUrl,
       customFaceUrl
     });
+  },
+
+  /**
+   * 获取今日存储键名
+   */
+  getTodayKey () {
+    const now = new Date();
+    return `todayScore_${now.getFullYear()}_${now.getMonth() + 1}_${now.getDate()}`;
   },
 
   /**
@@ -126,10 +276,15 @@ Page({
   },
 
   /**
-   * 点击受气包（核心功能）
+   * 点击受气包（核心功能）- 完整打击动效序列
    */
   onBagTap (e) {
     console.log('点击受气包', e);
+
+    // 隐藏点击提示
+    if (this.data.showTapHint) {
+      this.setData({ showTapHint: false });
+    }
 
     const damage = this.data.currentWeapon.damage;
     const isCrit = Math.random() < 0.15; // 15% 暴击率
@@ -144,18 +299,26 @@ Page({
     const rageFactor = this.data.rageMode ? 2 : 1;
     const actualDamage = Math.floor(isCrit ? damage * 2 * rageFactor : damage * rageFactor);
     const newScore = this.data.totalScore + actualDamage;
+    const newTodayScore = this.data.todayScore + actualDamage;
 
+    // 累计连击伤害
+    const newComboDamage = this.data.comboDamageTotal + actualDamage;
+
+    // ===== 打击动效序列 (300ms) =====
+
+    // 阶段1: 点击瞬间 (0-50ms)
+    // - 按钮缩小、屏幕震动
     this.setData({
-      totalScore: newScore
+      btnPressed: true,
+      screenShaking: true,
+      comboDamageTotal: newComboDamage
     });
-
-    wx.setStorageSync('totalScore', newScore);
 
     // 2. 切换表情
     this.changeBagExpression(isCrit);
 
-    // 3. 显示受击动画
-    this.showHitAnimation();
+    // 3. 显示受击动画（受气包压缩）
+    this.showHitAnimation(isCrit);
 
     // 4. 播放音效
     this.playHitSound();
@@ -163,18 +326,39 @@ Page({
     // 5. 震动反馈
     this.vibratePhone(isCrit);
 
-    // 6. 显示伤害飘字
+    // 6. 显示伤害飘字（从打击点弹出）
     const position = this.getTouchPosition(e);
     this.showDamageText(actualDamage, position, isCrit);
 
     // 7. 生成粒子特效
     this.createParticles(position, isCrit);
 
+    // 阶段2: 打击反馈 (50ms后)
+    setTimeout(() => {
+      // 屏幕震动结束
+      this.setData({ screenShaking: false });
+    }, 50);
+
+    // 阶段3: 恢复阶段 (150ms后)
+    setTimeout(() => {
+      // 按钮恢复
+      this.setData({ btnPressed: false });
+
+      // 更新分数（带滚动效果）
+      this.setData({
+        totalScore: newScore,
+        todayScore: newTodayScore
+      });
+
+      wx.setStorageSync('totalScore', newScore);
+      wx.setStorageSync(this.getTodayKey(), newTodayScore);
+    }, 150);
+
     // 8. 检查武器解锁
     this.checkWeaponUnlock(newScore);
 
-    // 9. 更新连击
-    this.updateCombo();
+    // 9. 更新连击（含连击特效）
+    this.updateCombo(actualDamage);
   },
 
   /**
@@ -214,14 +398,18 @@ Page({
   },
 
   /**
-   * 显示受击动画
+   * 显示受击动画 - 挤压回弹效果
    */
-  showHitAnimation () {
+  showHitAnimation (isCrit = false) {
+    // 设置动画状态
     this.setData({ bagShaking: true });
+
+    // 根据是否暴击调整动画时长
+    const duration = isCrit ? 500 : 300;
 
     setTimeout(() => {
       this.setData({ bagShaking: false });
-    }, 300);
+    }, duration);
   },
 
   /**
@@ -231,12 +419,12 @@ Page({
     const weaponId = this.data.currentWeapon.id;
     const soundMap = {
       'hand': '/audio/slap.mp3',
-      'keyboard': '/audio/keyboard.mp3',
-      'hammer': '/audio/hammer.mp3',
-      'baseball': '/audio/hit.mp3'
+      'keyboard': '/audio/slap.mp3',
+      'hammer': '/audio/slap.mp3',
+      'baseball': '/audio/slap.mp3'
     };
 
-    const soundPath = soundMap[weaponId] || '/audio/hit.mp3';
+    const soundPath = soundMap[weaponId] || '/audio/slap.mp3';
 
     if (this.audioPool) {
       this.audioPool.play(soundPath);
@@ -391,19 +579,75 @@ Page({
   },
 
   /**
-   * 更新连击
+   * 更新连击 - 含连击特效
    */
-  updateCombo () {
+  updateCombo (damage = 0) {
     if (this.comboTimer) {
       clearTimeout(this.comboTimer);
     }
 
-    this.setData({
-      comboCount: this.data.comboCount + 1
-    });
+    const newCombo = this.data.comboCount + 1;
 
+    // 连击超过3次触发特效
+    if (newCombo > 2) {
+      // 屏幕震动加强
+      this.setData({
+        comboCount: newCombo,
+        screenShaking: true,
+        comboFlash: true
+      });
+
+      // 背景闪烁红光效果
+      setTimeout(() => {
+        this.setData({ comboFlash: false, screenShaking: false });
+      }, 100);
+
+      // 增强震动
+      wx.vibrateShort({ type: 'heavy' });
+    } else {
+      this.setData({ comboCount: newCombo });
+    }
+
+    // 记录最大连击数（用于解锁闪电武器）
+    const maxCombo = wx.getStorageSync('maxCombo') || 0;
+    if (newCombo > maxCombo) {
+      wx.setStorageSync('maxCombo', newCombo);
+
+      // 检查是否解锁闪电武器
+      if (newCombo === 20) {
+        setTimeout(() => {
+          wx.showToast({
+            title: '⚡ 闪电已解锁！',
+            icon: 'none',
+            duration: 2000
+          });
+        }, 500);
+      }
+    }
+
+    // 连击结束时显示结算（1秒无操作）
     this.comboTimer = setTimeout(() => {
-      this.setData({ comboCount: 0 });
+      const finalCombo = this.data.comboCount;
+      const totalDamage = this.data.comboDamageTotal;
+
+      // 连击超过3次显示结算提示
+      if (finalCombo > 2) {
+        this.setData({
+          showComboResult: true,
+          comboResultText: `连击x${finalCombo}！总伤害+${totalDamage}`
+        });
+
+        // 1.5秒后隐藏结算
+        setTimeout(() => {
+          this.setData({ showComboResult: false });
+        }, 1500);
+      }
+
+      // 重置连击
+      this.setData({
+        comboCount: 0,
+        comboDamageTotal: 0
+      });
     }, 1000);
   },
 
@@ -428,25 +672,78 @@ Page({
   },
 
   /**
+   * 打开武器选择面板
+   */
+  openWeaponPanel () {
+    // 更新特殊武器解锁状态
+    this.updateSpecialWeaponsStatus();
+    this.setData({ showWeaponPanel: true });
+  },
+
+  /**
+   * 关闭武器选择面板
+   */
+  closeWeaponPanel () {
+    this.setData({ showWeaponPanel: false });
+  },
+
+  /**
+   * 更新特殊武器解锁状态
+   */
+  updateSpecialWeaponsStatus () {
+    const totalScore = this.data.totalScore;
+    const shareCount = wx.getStorageSync('shareCount') || 0;
+    const maxCombo = wx.getStorageSync('maxCombo') || 0;
+
+    const specialWeapons = this.data.specialWeapons.map(weapon => {
+      let unlocked = false;
+      if (weapon.id === 'bomb' && totalScore >= 5000) unlocked = true;
+      if (weapon.id === 'rocket' && shareCount >= 3) unlocked = true;
+      if (weapon.id === 'lightning' && maxCombo >= 20) unlocked = true;
+      if (weapon.id === 'nuke' && totalScore >= 10000) unlocked = true;
+      return { ...weapon, unlocked };
+    });
+
+    this.setData({ specialWeapons });
+  },
+
+  /**
    * 切换武器
    */
   switchWeapon (e) {
     const weaponId = e.currentTarget.dataset.id;
-    const weapon = this.data.weapons.find(w => w.id === weaponId);
+    const isSpecial = e.currentTarget.dataset.special === 'true';
 
-    if (!weapon) return;
+    let weapon;
+    if (isSpecial) {
+      weapon = this.data.specialWeapons.find(w => w.id === weaponId);
+      if (!weapon) return;
 
-    // 检查是否解锁
-    if (weapon.unlockScore > this.data.totalScore) {
-      wx.showToast({
-        title: `需要 ${weapon.unlockScore} 分解锁`,
-        icon: 'none'
-      });
-      return;
+      // 检查特殊武器是否解锁
+      if (!weapon.unlocked) {
+        wx.showToast({
+          title: `解锁条件：${weapon.unlockCondition}`,
+          icon: 'none'
+        });
+        return;
+      }
+    } else {
+      weapon = this.data.weapons.find(w => w.id === weaponId);
+      if (!weapon) return;
+
+      // 检查普通武器是否解锁
+      if (weapon.unlockScore > this.data.totalScore) {
+        wx.showToast({
+          title: `需要 ${weapon.unlockScore} 分解锁`,
+          icon: 'none'
+        });
+        return;
+      }
     }
 
     this.setData({
-      currentWeapon: weapon
+      currentWeapon: weapon,
+      showWeaponPanel: false
     });
 
     wx.setStorageSync('currentWeapon', weaponId);
@@ -458,9 +755,37 @@ Page({
   },
 
   /**
+   * 打开设置菜单
+   */
+  openSettingsMenu () {
+    this.setData({ showSettingsMenu: true });
+  },
+
+  /**
+   * 关闭设置菜单
+   */
+  closeSettingsMenu () {
+    this.setData({ showSettingsMenu: false });
+  },
+
+  /**
+   * 显示关于信息
+   */
+  showAbout () {
+    this.closeSettingsMenu();
+    wx.showModal({
+      title: '😤 受气包',
+      content: '一款解压出气小游戏\n\n版本: 1.0.0\n作者: 受气包团队\n\n生气了？来打我呀！',
+      showCancel: false,
+      confirmText: '知道了'
+    });
+  },
+
+  /**
    * 切换暗黑模式
    */
   toggleDarkMode () {
+    this.closeSettingsMenu();
     const darkMode = !this.data.darkMode;
     this.setData({ darkMode });
     wx.setStorageSync('darkMode', darkMode);
@@ -475,6 +800,7 @@ Page({
    * 切换BGM播放
    */
   toggleBGM () {
+    this.closeSettingsMenu();
     const bgmPlaying = !this.data.bgmPlaying;
     this.setData({ bgmPlaying });
     wx.setStorageSync('bgmPlaying', bgmPlaying);
@@ -505,9 +831,11 @@ Page({
         if (res.confirm) {
           this.setData({
             totalScore: 0,
+            todayScore: 0,
             currentWeapon: this.data.weapons[0]
           });
           wx.setStorageSync('totalScore', 0);
+          wx.setStorageSync(this.getTodayKey(), 0);
           wx.setStorageSync('currentWeapon', 'hand');
           wx.showToast({
             title: '已重置',
@@ -516,6 +844,228 @@ Page({
         }
       }
     });
+  },
+
+  /**
+   * 查看成就 - 打开荣誉墙
+   */
+  viewAchievements () {
+    // 更新成就解锁状态
+    this.updateAchievementsStatus();
+    this.setData({ showAchievementPanel: true });
+  },
+
+  /**
+   * 关闭成就面板
+   */
+  closeAchievementPanel () {
+    this.setData({ showAchievementPanel: false });
+  },
+
+  /**
+   * 更新成就解锁状态
+   */
+  updateAchievementsStatus () {
+    const totalScore = this.data.totalScore;
+    const maxCombo = wx.getStorageSync('maxCombo') || 0;
+    const unlockedWeapons = this.data.weapons.filter(w => w.unlockScore <= totalScore).length;
+
+    const achievements = this.data.achievements.map(achievement => {
+      let unlocked = false;
+      if (achievement.type === 'weapon') {
+        unlocked = unlockedWeapons >= achievement.requirement;
+      } else if (achievement.type === 'combo') {
+        unlocked = maxCombo >= achievement.requirement;
+      } else {
+        unlocked = totalScore >= achievement.requirement;
+      }
+      return { ...achievement, unlocked };
+    });
+
+    // 计算已解锁成就数量
+    const unlockedAchievementCount = achievements.filter(a => a.unlocked).length;
+
+    this.setData({ achievements, unlockedAchievementCount });
+  },
+
+  /**
+   * 检查并触发成就解锁动画
+   */
+  checkAchievementUnlock (newScore, newCombo = 0) {
+    const maxCombo = Math.max(wx.getStorageSync('maxCombo') || 0, newCombo);
+    const unlockedWeapons = this.data.weapons.filter(w => w.unlockScore <= newScore).length;
+
+    for (const achievement of this.data.achievements) {
+      if (achievement.unlocked) continue;
+
+      let shouldUnlock = false;
+      if (achievement.type === 'weapon') {
+        shouldUnlock = unlockedWeapons >= achievement.requirement;
+      } else if (achievement.type === 'combo') {
+        shouldUnlock = maxCombo >= achievement.requirement;
+      } else {
+        shouldUnlock = newScore >= achievement.requirement;
+      }
+
+      if (shouldUnlock) {
+        // 触发解锁动画
+        this.showAchievementUnlockAnimation(achievement);
+        return; // 一次只显示一个
+      }
+    }
+  },
+
+  /**
+   * 显示成就解锁动画
+   */
+  showAchievementUnlockAnimation (achievement) {
+    this.setData({
+      showAchievementUnlock: true,
+      newAchievement: achievement
+    });
+
+    // 播放音效
+    // this.playSound('achievement');
+
+    // 震动
+    wx.vibrateLong();
+
+    // 3秒后关闭
+    setTimeout(() => {
+      this.setData({ showAchievementUnlock: false });
+      // 更新成就状态
+      this.updateAchievementsStatus();
+    }, 3000);
+  },
+
+  /**
+   * 分享战绩 - 生成社交卡片
+   */
+  shareResult () {
+    const totalScore = this.data.totalScore;
+    const todayScore = this.data.todayScore;
+    const maxCombo = wx.getStorageSync('maxCombo') || 0;
+    const weaponName = this.data.currentWeapon.name;
+
+    // 根据伤害量生成趣味标签
+    let funnyTag = '今日情绪稳定 😌';
+    let moodEmoji = '😐';
+    if (todayScore >= 10000) {
+      funnyTag = '暴力美学大师 💥';
+      moodEmoji = '😈';
+    } else if (todayScore >= 5000) {
+      funnyTag = '键盘毁灭者 ⌨️';
+      moodEmoji = '😤';
+    } else if (todayScore >= 1000) {
+      funnyTag = '怒气释放中 🔥';
+      moodEmoji = '😠';
+    } else if (todayScore >= 500) {
+      funnyTag = '小有成就 💪';
+      moodEmoji = '😊';
+    }
+
+    // 根据伤害选择受气包表情
+    let bagMood = 'normal';
+    if (totalScore >= 10000) bagMood = 'dizzy';
+    else if (totalScore >= 5000) bagMood = 'crit';
+    else if (totalScore >= 1000) bagMood = 'hit';
+
+    this.setData({
+      showShareCard: true,
+      shareCardData: {
+        totalScore,
+        todayScore,
+        maxCombo,
+        weaponName,
+        funnyTag,
+        moodEmoji,
+        bagMood,
+        date: this.formatDate(new Date())
+      }
+    });
+  },
+
+  /**
+   * 格式化日期
+   */
+  formatDate (date) {
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    return `${month}月${day}日`;
+  },
+
+  /**
+   * 关闭分享卡片
+   */
+  closeShareCard () {
+    this.setData({ showShareCard: false });
+  },
+
+  /**
+   * 分享给好友
+   */
+  shareToFriend () {
+    // 触发微信分享
+    wx.showShareMenu({
+      withShareTicket: true,
+      menus: ['shareAppMessage', 'shareTimeline']
+    });
+
+    wx.showToast({
+      title: '点击右上角分享',
+      icon: 'none'
+    });
+  },
+
+  /**
+   * 保存分享卡片
+   */
+  saveShareCard () {
+    // 记录分享次数
+    const shareCount = (wx.getStorageSync('shareCount') || 0) + 1;
+    wx.setStorageSync('shareCount', shareCount);
+
+    wx.showToast({
+      title: '卡片已保存',
+      icon: 'success'
+    });
+
+    // 检查是否解锁新武器
+    if (shareCount === 3) {
+      setTimeout(() => {
+        this.showAchievementUnlockAnimation({
+          id: 'rocket_unlock',
+          name: '火箭已解锁',
+          icon: '🚀',
+          description: '分享3次解锁'
+        });
+      }, 1500);
+    }
+
+    this.setData({ showShareCard: false });
+  },
+
+  /**
+   * 创建点击波纹
+   */
+  createRipple (x, y) {
+    const ripple = {
+      id: this.data.nextRippleId,
+      x: x,
+      y: y
+    };
+
+    const ripples = [...this.data.ripples, ripple];
+    this.setData({
+      ripples,
+      nextRippleId: this.data.nextRippleId + 1
+    });
+
+    // 动画结束后移除
+    setTimeout(() => {
+      const newRipples = this.data.ripples.filter(r => r.id !== ripple.id);
+      this.setData({ ripples: newRipples });
+    }, 600);
   },
 
   /**

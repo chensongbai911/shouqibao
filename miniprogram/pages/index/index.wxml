@@ -1,109 +1,552 @@
 <!--index.wxml-->
-<view class="container {{darkMode ? 'dark-mode' : ''}}">
-  <!-- 顶部分数显示 -->
-  <view class="score-display">
-    <view class="score-label">总伤害</view>
-    <view class="score-value">{{totalScore}}</view>
-    <view wx:if="{{comboCount > 2}}" class="combo-counter">
-      连击 x{{comboCount}}
+<view class="container {{darkMode ? 'dark-mode' : ''}} {{screenShaking ? 'screen-shake' : ''}}">
+  <!-- 多巴胺风格渐变背景 - 全屏沉浸式 -->
+  <view class="gradient-background">
+    <view class="gradient-layer"></view>
+    <!-- 浮动装饰圆点 -->
+    <view class="bg-particle p1"></view>
+    <view class="bg-particle p2"></view>
+    <view class="bg-particle p3"></view>
+    <view class="bg-particle p4"></view>
+    <view class="bg-particle p5"></view>
+    <view class="bg-particle p6"></view>
+    <view class="bg-particle p7"></view>
+    <view class="bg-particle p8"></view>
+    <view class="bg-particle p9"></view>
+    <view class="bg-particle p10"></view>
+  </view>
+
+  <!-- 连击闪光背景 -->
+  <view class="combo-flash-overlay {{comboFlash ? 'active' : ''}}"></view>
+
+  <!-- 连击动态飘字提示（替代红色矩形框） -->
+  <view class="combo-float-text {{showComboResult ? 'show' : ''}}">
+    <text class="combo-text-main">{{comboResultText}}</text>
+  </view>
+
+  <!-- 顶部HUD - 悬浮分数（无背景框） -->
+  <view class="score-hud" style="padding-top: {{statusBarHeight + 10}}px;">
+    <!-- 左上角夜间模式（小图标，半透明） -->
+    <view class="top-left-btn" bindtap="toggleDarkMode">
+      <text class="mini-icon">{{darkMode ? '☀️' : '🌙'}}</text>
+    </view>
+
+    <!-- 中央大分数 -->
+    <view class="score-display">
+      <text class="score-number">{{totalScore}}</text>
+      <text class="score-subtitle" wx:if="{{todayScore > 0}}">今日 +{{todayScore}}</text>
+    </view>
+
+    <!-- 连击徽章（悬浮在分数旁） -->
+    <view wx:if="{{comboCount > 2}}" class="combo-badge-float">
+      <text class="combo-x">×{{comboCount}}</text>
     </view>
   </view>
 
   <!-- 暴怒模式指示器 -->
-  <view wx:if="{{rageMode}}" class="rage-indicator">
+  <view wx:if="{{rageMode}}" class="rage-indicator-float">
     🔥 暴怒模式 🔥
   </view>
 
-  <!-- 暗黑模式切换按钮 -->
-  <view class="settings-button" bindtap="toggleDarkMode">
-    <text>{{darkMode ? '☀️' : '🌙'}}</text>
-  </view>
+  <!-- 主要内容区域 -->
+  <view class="main-content">
 
-  <!-- BGM控制按钮 -->
-  <view class="bgm-control" bindtap="toggleBGM">
-    <text class="bgm-icon">{{bgmPlaying ? '🔊' : '🔇'}}</text>
-  </view>
+    <!-- 受气包主体区域 - 全屏触控 -->
+    <view class="bag-area touch-area" bindtap="onBagTap" bindlongpress="onBagLongPress" bind:touchstart="onTouchStart" bind:touchend="onTouchEnd">
+      <!-- 当前武器浮现显示 -->
+      <view class="floating-weapon {{bagShaking ? 'weapon-swing' : ''}}" wx:if="{{currentWeapon.id !== 'hand'}}">
+        <text class="floating-weapon-icon">{{currentWeapon.icon}}</text>
+      </view>
 
-  <!-- 受气包主体 -->
-  <view class="bag-container">
-    <!-- 3D包装层 -->
-    <view class="bag-3d-wrapper {{bagShaking ? (bagExpression === 'crit' ? 'crit-hit' : 'hit-squash') : ''}}">
-      <image
-        class="bag-image {{bagShaking ? 'shaking' : ''}} expression-{{bagExpression}}"
-        src="{{useCustomFace ? customFaceUrl : '/images/bag_normal.png'}}"
-        mode="{{useCustomFace ? 'aspectFill' : 'aspectFit'}}"
-        bindtap="onBagTap"
-        bind:touchstart="onTouchStart"
-      />
-    </view>
-
-    <!-- 3D动态阴影 -->
-    <view class="bag-shadow {{bagShaking ? 'shadow-active' : ''}}"></view>
-
-    <!-- 昏迷星星特效 -->
-    <view wx:if="{{bagExpression === 'dizzy'}}" class="dizzy-stars">
-      <text class="star">⭐</text>
-      <text class="star">⭐</text>
-      <text class="star">⭐</text>
-    </view>
-  </view>
-
-  <!-- 粒子特效容器（移到外面，覆盖整个屏幕） -->
-  <view class="particles-container">
-    <view
-      wx:for="{{particles}}"
-      wx:key="id"
-      class="particle"
-      style="left: {{item.x}}px; top: {{item.y}}px; width: {{item.size}}rpx; height: {{item.size}}rpx; background: {{item.color}}; --tx: {{item.vx}}rpx; --ty: {{item.vy}}rpx; transform: rotate({{item.rotation}}deg);">
-    </view>
-  </view>
-
-  <!-- 伤害飘字容器（移到外面，覆盖整个屏幕） -->
-  <view class="damage-texts-container">
-    <view
-      wx:for="{{damageTexts}}"
-      wx:key="id"
-      class="damage-text {{item.isCrit ? 'crit' : 'normal'}}"
-      style="left: {{item.x}}px; top: {{item.y}}px;">
-      {{item.isCrit ? 'CRIT! ' : ''}}{{item.value}}
-    </view>
-  </view>
-
-  <!-- 武器信息显示 -->
-  <view class="weapon-info">
-    <view class="weapon-name">
-      {{currentWeapon.icon}} {{currentWeapon.name}}
-    </view>
-    <view class="weapon-damage">
-      伤害: {{currentWeapon.damage}}
-    </view>
-  </view>
-
-  <!-- 武器选择区域 -->
-  <view class="weapons-section">
-    <view class="section-title">选择武器</view>
-    <view class="weapons-grid">
-      <view
-        wx:for="{{weapons}}"
-        wx:key="id"
-        class="weapon-card {{currentWeapon.id === item.id ? 'active' : ''}} {{item.unlockScore > totalScore ? 'locked' : ''}}"
-        bindtap="switchWeapon"
-        data-id="{{item.id}}">
-        <view class="weapon-icon">{{item.icon}}</view>
-        <view class="weapon-name-text">{{item.name}}</view>
-        <view class="weapon-damage-text">伤害: {{item.damage}}</view>
-        <view wx:if="{{item.unlockScore > totalScore}}" class="weapon-unlock-hint">
-          需要 {{item.unlockScore}} 分
+      <view class="bag-container">
+        <!-- 3D包装层 - 增强物理形变 -->
+        <view class="bag-3d-wrapper {{bagShaking ? (bagExpression === 'crit' ? 'crit-hit' : 'hit-squash') : ''}}">
+          <!-- 表情图层叠加 -->
+          <block wx:if="{{!useCustomFace}}">
+            <image
+              class="bag-image bag-layer {{bagShaking ? 'shaking' : ''}} {{bagExpression === 'normal' ? 'active' : ''}}"
+              src="/images/bag_normal.png"
+              mode="aspectFit"
+            />
+            <image
+              class="bag-image bag-layer {{bagShaking ? 'shaking' : ''}} {{bagExpression === 'hit' ? 'active' : ''}} expression-hit"
+              src="/images/bag_hit.png"
+              mode="aspectFit"
+            />
+            <image
+              class="bag-image bag-layer {{bagShaking ? 'shaking' : ''}} {{bagExpression === 'crit' ? 'active' : ''}} expression-crit"
+              src="/images/bag_crit.png"
+              mode="aspectFit"
+            />
+            <image
+              class="bag-image bag-layer {{bagShaking ? 'shaking' : ''}} {{bagExpression === 'dizzy' ? 'active' : ''}} expression-dizzy"
+              src="/images/bag_dizzy.png"
+              mode="aspectFit"
+            />
+          </block>
+          <!-- 自定义头像模式 -->
+          <image
+            wx:if="{{useCustomFace}}"
+            class="bag-image {{bagShaking ? 'shaking' : ''}} expression-{{bagExpression}}"
+            src="{{customFaceUrl}}"
+            mode="aspectFill"
+          />
+          <!-- 点击提示涟漪 -->
+          <view class="tap-hint-ripple" wx:if="{{showTapHint}}">
+            <view class="ripple-ring r1"></view>
+            <view class="ripple-ring r2"></view>
+            <view class="ripple-ring r3"></view>
+          </view>
         </view>
-        <text wx:if="{{item.unlockScore > totalScore}}" class="lock-icon">🔒</text>
+
+        <!-- 动态脚底阴影 - 增强版 -->
+        <view class="bag-ground-shadow {{bagShaking ? 'shadow-squash' : ''}}">
+          <view class="shadow-core"></view>
+          <view class="shadow-blur"></view>
+        </view>
+
+        <!-- 昏迷星星特效 -->
+        <view wx:if="{{bagExpression === 'dizzy'}}" class="dizzy-stars">
+          <text class="star">⭐</text>
+          <text class="star">⭐</text>
+          <text class="star">⭐</text>
+        </view>
+      </view>
+
+      <!-- 触控提示 -->
+      <view class="touch-hint" wx:if="{{!totalScore}}">
+        <text class="touch-hint-icon">👆</text>
+        <text class="touch-hint-text">点击任意位置出气</text>
+      </view>
+    </view>
+
+    <!-- 粒子特效容器 -->
+    <view class="particles-container">
+      <view
+        wx:for="{{particles}}"
+        wx:key="id"
+        class="particle"
+        style="left: {{item.x}}px; top: {{item.y}}px; width: {{item.size}}rpx; height: {{item.size}}rpx; background: {{item.color}}; --tx: {{item.vx}}rpx; --ty: {{item.vy}}rpx; transform: rotate({{item.rotation}}deg);">
+      </view>
+    </view>
+
+    <!-- 伤害飘字容器 - 漫画风格 -->
+    <view class="damage-texts-container">
+      <view
+        wx:for="{{damageTexts}}"
+        wx:key="id"
+        class="damage-text-comic {{item.isCrit ? 'crit' : 'normal'}}"
+        style="left: {{item.x}}px; top: {{item.y}}px;">
+        <!-- 暴击爆炸气泡 -->
+        <view wx:if="{{item.isCrit}}" class="crit-explosion-bubble">
+          <view class="explosion-spike s1"></view>
+          <view class="explosion-spike s2"></view>
+          <view class="explosion-spike s3"></view>
+          <view class="explosion-spike s4"></view>
+          <view class="explosion-spike s5"></view>
+          <view class="explosion-spike s6"></view>
+          <view class="explosion-spike s7"></view>
+          <view class="explosion-spike s8"></view>
+        </view>
+        <text class="damage-value-comic">{{item.isCrit ? 'CRIT!' : ''}}</text>
+        <text class="damage-number-comic">+{{item.value}}</text>
+      </view>
+    </view>
+
+    <!-- 底部悬浮Dock栏 - 毛玻璃效果 -->
+    <view class="floating-dock">
+      <view class="dock-item" bindtap="openWeaponPanel">
+        <view class="dock-icon-wrap">
+          <text class="dock-icon">{{currentWeapon.icon}}</text>
+        </view>
+        <text class="dock-label">武器</text>
+      </view>
+      <view class="dock-item" bindtap="viewAchievements">
+        <view class="dock-icon-wrap">
+          <text class="dock-icon">🏆</text>
+        </view>
+        <text class="dock-label">成就</text>
+      </view>
+      <view class="dock-item" bindtap="chooseCustomFace">
+        <view class="dock-icon-wrap">
+          <text class="dock-icon">📷</text>
+        </view>
+        <text class="dock-label">换脸</text>
+      </view>
+      <view class="dock-item" bindtap="openSettingsMenu">
+        <view class="dock-icon-wrap">
+          <text class="dock-icon">⚙️</text>
+        </view>
+        <text class="dock-label">设置</text>
+      </view>
+      <view class="dock-item" bindtap="resetScore">
+        <view class="dock-icon-wrap">
+          <text class="dock-icon">🔄</text>
+        </view>
+        <text class="dock-label">重置</text>
+      </view>
+    </view>
+
+    <!-- 设置弹出菜单（扇形/半圆展开） -->
+    <view class="settings-menu-mask {{showSettingsMenu ? 'show' : ''}}" bindtap="closeSettingsMenu"></view>
+    <view class="settings-menu {{showSettingsMenu ? 'show' : ''}}">
+      <view class="settings-item" bindtap="toggleBGM">
+        <text class="settings-icon">{{bgmPlaying ? '🔊' : '🔇'}}</text>
+        <text class="settings-text">{{bgmPlaying ? '关闭音效' : '开启音效'}}</text>
+      </view>
+      <view class="settings-item" bindtap="toggleDarkMode">
+        <text class="settings-icon">{{darkMode ? '☀️' : '🌙'}}</text>
+        <text class="settings-text">{{darkMode ? '浅色模式' : '深色模式'}}</text>
+      </view>
+      <view class="settings-item" bindtap="shareResult">
+        <text class="settings-icon">📤</text>
+        <text class="settings-text">分享战绩</text>
+      </view>
+      <view class="settings-item" bindtap="showAbout">
+        <text class="settings-icon">ℹ️</text>
+        <text class="settings-text">关于</text>
       </view>
     </view>
   </view>
 
-  <!-- 底部操作按钮 -->
-  <view class="controls">
-    <button class="control-btn" bindtap="chooseCustomFace">📷 换脸</button>
-    <button class="control-btn" bindtap="resetFace">↩️ 恢复</button>
-    <button class="control-btn primary" bindtap="resetScore">🔄 重置</button>
+  <!-- 武器选择面板（底部弹出 - 豪华卡牌风格） -->
+  <view class="weapon-panel-mask {{showWeaponPanel ? 'show' : ''}}" bindtap="closeWeaponPanel"></view>
+  <view class="weapon-panel {{showWeaponPanel ? 'show' : ''}}">
+    <!-- 面板头部 -->
+    <view class="panel-header">
+      <view class="panel-drag-indicator"></view>
+      <text class="panel-title">⚔️ 武器库</text>
+      <text class="panel-subtitle">收集更多武器，释放更大怒气</text>
+    </view>
+
+    <!-- 卡牌轮播区域 -->
+    <scroll-view class="card-carousel" scroll-x="true" enhanced="true" show-scrollbar="false" scroll-with-animation="true">
+      <!-- 普通武器卡牌 -->
+      <view
+        wx:for="{{weapons}}"
+        wx:key="id"
+        class="weapon-card-wrapper"
+        bindtap="switchWeapon"
+        data-id="{{item.id}}"
+        data-special="false">
+        <view class="weapon-card rarity-{{item.rarity}} {{currentWeapon.id === item.id ? 'selected' : ''}} {{item.unlockScore > totalScore ? 'locked' : ''}}">
+          <!-- 卡牌光效边框 -->
+          <view class="card-glow" style="--card-color: {{item.color}};"></view>
+
+          <!-- 稀有度标签 -->
+          <view class="rarity-badge rarity-{{item.rarity}}">
+            <text wx:if="{{item.rarity === 'common'}}">普通</text>
+            <text wx:if="{{item.rarity === 'uncommon'}}">优秀</text>
+            <text wx:if="{{item.rarity === 'rare'}}">稀有</text>
+            <text wx:if="{{item.rarity === 'epic'}}">史诗</text>
+          </view>
+
+          <!-- 武器图标区 -->
+          <view class="card-icon-area">
+            <view class="weapon-icon-3d" style="--card-color: {{item.color}};">
+              <text class="weapon-main-icon">{{item.icon}}</text>
+            </view>
+          </view>
+
+          <!-- 武器名称 -->
+          <text class="card-weapon-name">{{item.name}}</text>
+
+          <!-- 属性星级 -->
+          <view class="card-stats">
+            <view class="stat-row">
+              <text class="stat-label">攻击</text>
+              <view class="stat-stars">
+                <text wx:for="{{5}}" wx:key="*this" wx:for-item="star" class="star {{star < item.attackStars ? 'filled' : ''}}">★</text>
+              </view>
+            </view>
+            <view class="stat-row">
+              <text class="stat-label">攻速</text>
+              <view class="stat-stars">
+                <text wx:for="{{5}}" wx:key="*this" wx:for-item="star" class="star {{star < item.speedStars ? 'filled' : ''}}">★</text>
+              </view>
+            </view>
+            <view class="stat-row">
+              <text class="stat-label">暴击</text>
+              <view class="stat-stars">
+                <text wx:for="{{5}}" wx:key="*this" wx:for-item="star" class="star {{star < item.critStars ? 'filled' : ''}}">★</text>
+              </view>
+            </view>
+          </view>
+
+          <!-- 伤害数值 -->
+          <view class="card-damage">
+            <text class="damage-value">{{item.damage}}</text>
+            <text class="damage-label">伤害</text>
+          </view>
+
+          <!-- 描述文字 -->
+          <text class="card-description">{{item.description}}</text>
+
+          <!-- 选中标记 -->
+          <view wx:if="{{currentWeapon.id === item.id}}" class="equipped-badge">
+            <text>✓ 装备中</text>
+          </view>
+
+          <!-- 锁定遮罩 -->
+          <view wx:if="{{item.unlockScore > totalScore}}" class="card-lock-overlay">
+            <view class="lock-content">
+              <text class="lock-icon-big">🔒</text>
+              <text class="lock-requirement">需要 {{item.unlockScore}} 分</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 分隔线 -->
+      <view class="card-divider">
+        <view class="divider-line"></view>
+        <text class="divider-text">传说武器</text>
+        <view class="divider-line"></view>
+      </view>
+
+      <!-- 特殊武器卡牌（传说级） -->
+      <view
+        wx:for="{{specialWeapons}}"
+        wx:key="id"
+        class="weapon-card-wrapper"
+        bindtap="switchWeapon"
+        data-id="{{item.id}}"
+        data-special="true">
+        <view class="weapon-card rarity-{{item.rarity}} {{currentWeapon.id === item.id ? 'selected' : ''}} {{!item.unlocked ? 'locked' : ''}}">
+          <!-- 卡牌光效边框 -->
+          <view class="card-glow legendary" style="--card-color: {{item.color}};"></view>
+
+          <!-- 稀有度标签 -->
+          <view class="rarity-badge rarity-{{item.rarity}}">
+            <text wx:if="{{item.rarity === 'legendary'}}">传说</text>
+            <text wx:if="{{item.rarity === 'mythic'}}">神话</text>
+          </view>
+
+          <!-- 武器图标区 -->
+          <view class="card-icon-area">
+            <view class="weapon-icon-3d legendary" style="--card-color: {{item.color}};">
+              <text class="weapon-main-icon">{{item.icon}}</text>
+            </view>
+          </view>
+
+          <!-- 武器名称 -->
+          <text class="card-weapon-name">{{item.name}}</text>
+
+          <!-- 属性星级 -->
+          <view class="card-stats">
+            <view class="stat-row">
+              <text class="stat-label">攻击</text>
+              <view class="stat-stars">
+                <text wx:for="{{5}}" wx:key="*this" wx:for-item="star" class="star {{star < item.attackStars ? 'filled' : ''}}">★</text>
+              </view>
+            </view>
+            <view class="stat-row">
+              <text class="stat-label">攻速</text>
+              <view class="stat-stars">
+                <text wx:for="{{5}}" wx:key="*this" wx:for-item="star" class="star {{star < item.speedStars ? 'filled' : ''}}">★</text>
+              </view>
+            </view>
+            <view class="stat-row">
+              <text class="stat-label">暴击</text>
+              <view class="stat-stars">
+                <text wx:for="{{5}}" wx:key="*this" wx:for-item="star" class="star {{star < item.critStars ? 'filled' : ''}}">★</text>
+              </view>
+            </view>
+          </view>
+
+          <!-- 伤害数值 -->
+          <view class="card-damage legendary">
+            <text class="damage-value">{{item.damage}}</text>
+            <text class="damage-label">伤害</text>
+          </view>
+
+          <!-- 描述文字 -->
+          <text class="card-description">{{item.description}}</text>
+
+          <!-- 选中标记 -->
+          <view wx:if="{{currentWeapon.id === item.id}}" class="equipped-badge legendary">
+            <text>✓ 装备中</text>
+          </view>
+
+          <!-- 锁定遮罩 -->
+          <view wx:if="{{!item.unlocked}}" class="card-lock-overlay legendary">
+            <view class="lock-content">
+              <text class="lock-icon-big">🔒</text>
+              <text class="lock-requirement">{{item.unlockCondition}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </scroll-view>
+
+    <!-- 关闭按钮 -->
+    <view class="panel-footer">
+      <view class="close-panel-btn" bindtap="closeWeaponPanel">
+        <text>关闭武器库</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 成就荣誉墙面板 -->
+  <view class="achievement-panel-mask {{showAchievementPanel ? 'show' : ''}}" bindtap="closeAchievementPanel"></view>
+  <view class="achievement-panel {{showAchievementPanel ? 'show' : ''}}">
+    <!-- 面板头部 -->
+    <view class="achievement-header">
+      <view class="panel-drag-indicator"></view>
+      <text class="achievement-title">🏆 荣誉墙</text>
+      <text class="achievement-subtitle">收集所有成就，成为出气大师</text>
+    </view>
+
+    <!-- 成就网格 -->
+    <scroll-view class="trophy-shelf" scroll-y="true" enhanced="true" show-scrollbar="false">
+      <view class="trophy-grid">
+        <view
+          wx:for="{{achievements}}"
+          wx:key="id"
+          class="trophy-item {{item.unlocked ? 'unlocked' : 'locked'}} rarity-{{item.rarity}}">
+          <!-- 奖杯底座 -->
+          <view class="trophy-pedestal">
+            <!-- 奖杯/剪影 -->
+            <view class="trophy-display">
+              <text class="trophy-icon {{item.unlocked ? '' : 'silhouette'}}">{{item.icon}}</text>
+              <!-- 光芒效果 -->
+              <view wx:if="{{item.unlocked}}" class="trophy-glow"></view>
+            </view>
+            <!-- 锁定图标 -->
+            <view wx:if="{{!item.unlocked}}" class="trophy-lock">
+              <text class="lock-icon">🔒</text>
+            </view>
+          </view>
+          <!-- 成就信息 -->
+          <view class="trophy-info">
+            <text class="trophy-name {{item.unlocked ? '' : 'hidden-name'}}">{{item.unlocked ? item.name : '???'}}</text>
+            <text class="trophy-condition">{{item.condition}}</text>
+          </view>
+        </view>
+      </view>
+    </scroll-view>
+
+    <!-- 统计信息 -->
+    <view class="achievement-stats">
+      <view class="stat-item">
+        <text class="stat-num">{{unlockedAchievementCount}}</text>
+        <text class="stat-label">已解锁</text>
+      </view>
+      <view class="stat-divider"></view>
+      <view class="stat-item">
+        <text class="stat-num">{{achievements.length}}</text>
+        <text class="stat-label">总成就</text>
+      </view>
+    </view>
+
+    <!-- 关闭按钮 -->
+    <view class="achievement-footer">
+      <view class="close-achievement-btn" bindtap="closeAchievementPanel">
+        <text>关闭荣誉墙</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 成就解锁全屏动画 -->
+  <view class="achievement-unlock-overlay {{showAchievementUnlock ? 'show' : ''}}">
+    <view class="unlock-content">
+      <view class="unlock-rays">
+        <view class="ray r1"></view>
+        <view class="ray r2"></view>
+        <view class="ray r3"></view>
+        <view class="ray r4"></view>
+        <view class="ray r5"></view>
+        <view class="ray r6"></view>
+      </view>
+      <view class="unlock-trophy-wrap">
+        <text class="unlock-trophy-icon">{{newAchievement.icon}}</text>
+      </view>
+      <text class="unlock-label">成就解锁</text>
+      <text class="unlock-name">{{newAchievement.name}}</text>
+      <view class="unlock-sparkles">
+        <text class="sparkle s1">✨</text>
+        <text class="sparkle s2">✨</text>
+        <text class="sparkle s3">✨</text>
+        <text class="sparkle s4">✨</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 分享卡片面板 -->
+  <view class="share-card-mask {{showShareCard ? 'show' : ''}}" bindtap="closeShareCard"></view>
+  <view class="share-card-panel {{showShareCard ? 'show' : ''}}">
+    <!-- 卡片预览区 -->
+    <view class="share-card-preview" id="shareCardCanvas">
+      <!-- 卡片背景 -->
+      <view class="card-bg-gradient"></view>
+
+      <!-- 顶部装饰 -->
+      <view class="card-top-decor">
+        <text class="card-app-name">😤 受气包</text>
+        <text class="card-slogan">出气神器·治愈心情</text>
+      </view>
+
+      <!-- 主角区域 -->
+      <view class="card-hero-section">
+        <view class="card-bag-wrap">
+          <text class="card-expression">{{shareCardData.moodEmoji}}</text>
+        </view>
+        <view class="card-title-wrap">
+          <text class="card-user-title">{{shareCardData.funnyTag}}</text>
+        </view>
+      </view>
+
+      <!-- 数据区域 -->
+      <view class="card-data-section">
+        <view class="data-item main">
+          <text class="data-value">{{shareCardData.totalScore}}</text>
+          <text class="data-label">总伤害</text>
+        </view>
+        <view class="data-divider"></view>
+        <view class="data-item">
+          <text class="data-value">{{shareCardData.todayScore}}</text>
+          <text class="data-label">今日输出</text>
+        </view>
+        <view class="data-divider"></view>
+        <view class="data-item">
+          <text class="data-value">{{shareCardData.weaponName}}</text>
+          <text class="data-label">惯用武器</text>
+        </view>
+      </view>
+
+      <!-- 趣味标签 -->
+      <view class="card-tags">
+        <text class="fun-tag" wx:if="{{shareCardData.totalScore > 10000}}">#暴力美学</text>
+        <text class="fun-tag" wx:if="{{shareCardData.totalScore > 5000}}">#压力粉碎机</text>
+        <text class="fun-tag">#情绪管理大师</text>
+        <text class="fun-tag">#出气达人</text>
+      </view>
+
+      <!-- 底部信息区 -->
+      <view class="card-footer-section">
+        <text class="card-date">{{shareCardData.date}}</text>
+        <view class="qr-placeholder">
+          <text class="qr-icon">📱</text>
+          <text class="qr-hint">扫码一起出气</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 操作按钮 -->
+    <view class="share-actions">
+      <view class="share-btn save" bindtap="saveShareCard">
+        <text class="share-btn-icon">💾</text>
+        <text class="share-btn-text">保存图片</text>
+      </view>
+      <view class="share-btn send" bindtap="shareToFriend">
+        <text class="share-btn-icon">📤</text>
+        <text class="share-btn-text">分享好友</text>
+      </view>
+    </view>
+
+    <!-- 关闭按钮 -->
+    <view class="share-close" bindtap="closeShareCard">
+      <text>✕</text>
+    </view>
   </view>
 </view>

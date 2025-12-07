@@ -1,4 +1,5 @@
 {
   "navigationBarTitleText": "受气包",
+  "navigationStyle": "custom",
   "usingComponents": {}
 }
