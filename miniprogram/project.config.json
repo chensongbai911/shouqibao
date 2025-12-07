@@ -21,6 +21,14 @@
       {
         "value": ".md",
         "type": "suffix"
+      },
+      {
+        "value": "._",
+        "type": "prefix"
+      },
+      {
+        "value": ".DS_Store",
+        "type": "file"
       }
     ],
     "include": []
