@@ -1,15 +1,16 @@
-/* ========== 设计系统变量 - 多巴胺风格 ========== */
+/* ========== 设计系统变量 - 轻量清新风格 ========== */
 page {
-  /* 字体系统 */
-  --font-title: 'PingFang SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  /* 字体系统 - 圆润粗壮无衬线体，增强力量感和卡通感 */
+  --font-title: 'PingFang SC', 'Source Han Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-number: 'DIN Alternate', 'Helvetica Neue', Arial, sans-serif;
+  --font-comic: 'Comic Sans MS', cursive, sans-serif;
 
   /* 字号系统 */
   --font-size-title: 36rpx;
   --font-size-body: 28rpx;
   --font-size-number: 48rpx;
   --font-size-small: 24rpx;
-  --font-size-huge: 96rpx;       /* 超大分数 */
+  --font-size-huge: 100rpx;
 
   /* 间距系统 */
   --spacing-xs: 8rpx;
@@ -18,20 +19,38 @@ page {
   --spacing-lg: 32rpx;
   --spacing-container: 16rpx;
 
-  /* 多巴胺配色系统 */
-  --color-primary: #FF6B9D;      /* 糖果粉 */
-  --color-secondary: #C44AFF;    /* 亮紫色 */
-  --color-accent: #FF9A5C;       /* 暖橙色 */
-  --color-highlight: #FFD93D;    /* 金黄色 */
-  --color-danger: #FF6B6B;       /* 活力红 */
-  --color-candy-blue: #4ECDC4;   /* 糖果蓝 */
-  --color-text: #2D3436;
-  --color-text-light: #DFE6E9;
+  /* ========== 浅色主题配色 - 轻量清新、层级分明 ========== */
+  /* 背景层: 纯白/浅米白，营造简洁氛围 */
+  --color-bg-primary: #FFFFFF;
+  --color-bg-secondary: #F8F8F8;
+
+  /* 信息层: 明亮饱和色用于核心数据 */
+  --color-primary: #007AFF;       /* 主色蓝 - iOS风格 */
+  --color-secondary: #FFE135;     /* 明黄色 - 核心数据 */
+  --color-accent: #48DBFB;        /* 亮蓝色 - 强调 */
+
+  /* 强调色: 明黄/亮蓝用于核心数据 */
+  --color-highlight: #FFE135;     /* 明黄 */
+  --color-damage: #FFE135;        /* 伤害数值明黄 */
+  --color-danger: #E53935;        /* 品牌警示红 - 关闭按钮 */
+
+  /* 辅助色 */
+  --color-candy-blue: #48DBFB;    /* 亮蓝 */
+  --color-mint: #EEF5FF;          /* 淡蓝渐变背景 */
+
+  /* 文字色: 深灰/中灰，对比度≥7:1 */
+  --color-text: #333333;          /* 主文字深灰 */
+  --color-text-secondary: #666666; /* 辅助文字中灰 */
+  --color-text-light: #888888;    /* 浅色文字 */
+
+  /* 边框与分割线 */
+  --color-border: #E5E5E5;        /* 浅灰边框 */
+  --color-divider: #EEEEEE;       /* 分割线 */
 
   /* 毛玻璃效果 */
-  --glass-bg: rgba(255, 255, 255, 0.65);
+  --glass-bg: rgba(255, 255, 255, 0.85);
   --glass-blur: blur(20rpx);
-  --glass-border: rgba(255, 255, 255, 0.3);
+  --glass-border: rgba(255, 255, 255, 0.6);
 }
 
 /* 隐藏旧导航栏 - 改为全屏沉浸式 */
@@ -77,16 +96,15 @@ page {
   left: 0;
   right: 0;
   bottom: 0;
-  /* 多巴胺暖色渐变：浅橙→浅粉→奶油黄 */
-  background: linear-gradient(145deg,
-    #FFF5E6 0%,      /* 奶油黄 */
-    #FFE4EC 25%,     /* 浅粉 */
-    #FFF0F5 50%,     /* 淡玫瑰 */
-    #F5E6FF 75%,     /* 淡紫 */
-    #E8F4FD 100%     /* 浅蓝 */
+  /* 浅色主题：淡蓝渐变→纯白，避免单调感，让角色成为视觉焦点 */
+  background: linear-gradient(180deg,
+    #EEF5FF 0%,      /* 淡蓝 */
+    #F5F9FF 30%,     /* 极淡蓝 */
+    #FFFFFF 60%,     /* 纯白 */
+    #FFFFFF 100%     /* 纯白 */
   );
-  background-size: 200% 200%;
-  animation: gradient-flow 12s ease-in-out infinite;
+  background-size: 100% 100%;
+  animation: none; /* 浅色模式不需要动画，保持简洁 */
 }
 
 @keyframes gradient-flow {
@@ -189,18 +207,22 @@ page {
   }
 }
 
-/* 暗黑模式背景 */
+/* ========== 深色主题背景 - 高对比度、低压迫感 ========== */
 .container.dark-mode .gradient-layer {
-  background: linear-gradient(135deg,
-    #1a1a2e 0%,
-    #16213e 35%,
-    #1a1a2e 65%,
-    #0f0f23 100%
+  /* 深灰/炭黑，避免纯黑的生硬感 */
+  background: linear-gradient(180deg,
+    #1A1A1A 0%,       /* 深灰 */
+    #121212 50%,      /* 炭黑 */
+    #1A1A1A 100%
   );
+  background-size: 100% 100%;
+  animation: none;
 }
 
 .container.dark-mode .bg-particle {
   opacity: 0.2;
+  /* 深色模式下粒子带科技感光效 */
+  filter: saturate(1.2) brightness(1.1);
 }
 
 /* ========== 打击动效系统 ========== */
@@ -310,14 +332,16 @@ page {
   to { transform: rotate(360deg); }
 }
 
-/* 暗黑模式 */
+/* ========== 深色模式 - 高对比度、低压迫感 ========== */
 .container.dark-mode {
-  background: linear-gradient(135deg, #2D3436 0%, #1e272e 50%, #2D3436 100%);  /* 深灰渐变 */
+  /* 深灰/炭黑背景，避免纯黑的生硬感 */
+  background: linear-gradient(180deg, #1A1A1A 0%, #121212 50%, #1A1A1A 100%);
 }
 
 .container.dark-mode::before,
 .container.dark-mode::after {
-  background: radial-gradient(circle, rgba(78, 205, 196, 0.08) 0%, transparent 70%);  /* 治愈蓝光晕 */
+  /* 科技感光效 - 透明/暗纹理 */
+  background: radial-gradient(circle, rgba(72, 219, 251, 0.04) 0%, transparent 70%);
 }
 
 /* ========== 圆形分数卡片（缩小版） ========== */
@@ -1592,72 +1616,94 @@ page {
   }
 }
 
-/* ========== 暗黑模式适配 ========== */
+/* ========== 暗黑模式适配 - 高对比度、低压迫感 ========== */
 .dark-mode .score-circle {
-  background: linear-gradient(180deg, rgba(45, 52, 54, 0.95) 0%, rgba(30, 35, 40, 0.9) 100%);  /* 深灰 */
-  box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.4),
-              0 0 0 4rpx rgba(78, 205, 196, 0.4) inset;  /* 治愈蓝边框 */
+  /* 深灰色卡片背景(#282828或#1E1E1E)，与背景拉开层次 */
+  background: linear-gradient(180deg, #282828 0%, #1E1E1E 100%);
+  box-shadow:
+    0 16rpx 48rpx rgba(0, 0, 0, 0.5),
+    inset 0 2rpx 4rpx rgba(0, 0, 0, 0.3),
+    0 0 1rpx rgba(255, 255, 255, 0.1);  /* 发光边框保持立体感 */
 }
 
 .dark-mode .score-circle .score-label {
-  color: #DFE6E9;  /* 浅灰 */
+  /* 深色：中灰或浅灰文字 */
+  color: #CCCCCC;
 }
 
 .dark-mode .score-circle .score-value {
-  background: linear-gradient(135deg, #FFEAA7 0%, #fdcb6e 100%);  /* 亮黄 */
+  /* 高亮浅色：明黄#FFE135或浅天蓝#A2E3FC */
+  background: linear-gradient(135deg, #FFE135 0%, #A2E3FC 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  filter: drop-shadow(0 0 8rpx rgba(255, 225, 53, 0.5));
 }
 
 .dark-mode .section-title {
-  color: #DFE6E9;  /* 浅灰 */
+  /* 深色：纯白或浅灰 */
+  color: #FFFFFF;
 }
 
 .dark-mode .weapon-card {
-  background: rgba(45, 52, 54, 0.6);  /* 深灰半透明 */
-  border-color: rgba(78, 205, 196, 0.4);  /* 治愈蓝边框 */
-  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.3);
+  /* 深灰色卡片(#282828) */
+  background: linear-gradient(145deg, #282828 0%, #1E1E1E 100%);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 8rpx 24rpx rgba(0, 0, 0, 0.4),
+    inset 0 1rpx 0 rgba(255, 255, 255, 0.05);
 }
 
 .dark-mode .weapon-card .weapon-name-text {
-  color: #DFE6E9;  /* 浅灰 */
+  /* 深色：纯白 */
+  color: #FFFFFF;
 }
 
 .dark-mode .weapon-card .weapon-damage-text {
-  color: #FF9A76;  /* 温暖橙 */
+  /* 高亮浅色 */
+  color: #FFE135;
+  text-shadow: 0 0 6rpx rgba(255, 225, 53, 0.4);
 }
 
 .dark-mode .weapon-card.active {
-  border-color: transparent;
-  background: linear-gradient(135deg, rgba(78, 205, 196, 0.4) 0%, rgba(68, 160, 141, 0.3) 100%);  /* 治愈蓝渐变 */
-  box-shadow: 0 12rpx 36rpx rgba(78, 205, 196, 0.4),
-              0 0 20rpx rgba(78, 205, 196, 0.2) inset;
+  /* 选中：高亮浅色边框 */
+  border-color: #48DBFB;
+  background: linear-gradient(145deg, #2D2D2D 0%, #1E1E1E 100%);
+  box-shadow:
+    0 0 15rpx rgba(72, 219, 251, 0.3),
+    0 12rpx 36rpx rgba(0, 0, 0, 0.4),
+    inset 0 0 1rpx rgba(72, 219, 251, 0.2);
 }
 
 .dark-mode .weapon-card.active .weapon-name-text,
 .dark-mode .weapon-card.active .weapon-damage-text {
-  color: #fff;
+  color: #A2E3FC;
+  text-shadow: 0 0 8rpx rgba(162, 227, 252, 0.5);
 }
 
 .dark-mode .controls-simple {
-  background: rgba(45, 52, 54, 0.95);  /* 深灰 */
+  /* 深色：稍亮深色 */
+  background: #333333;
 }
 
 .dark-mode .control-icon.primary {
-  background: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%);  /* 治愈蓝 */
+  /* 高亮浅色按钮 */
+  background: linear-gradient(135deg, #48DBFB 0%, #A2E3FC 100%);
+  box-shadow: 0 0 12rpx rgba(72, 219, 251, 0.4);
 }
 
 .dark-mode .current-weapon-badge {
-  background: rgba(45, 52, 54, 0.95);  /* 深灰 */
+  background: #333333;
 }
 
 .dark-mode .weapon-badge-damage {
-  color: #FF9A76;  /* 温暖橙 */
+  color: #FFE135;
+  text-shadow: 0 0 6rpx rgba(255, 225, 53, 0.3);
 }
 
 .dark-mode .bag-shadow-simple {
-  background: radial-gradient(ellipse, rgba(0, 0, 0, 0.4) 0%, transparent 70%);
+  /* 科技感光效 */
+  background: radial-gradient(ellipse, rgba(72, 219, 251, 0.1) 0%, rgba(0, 0, 0, 0.4) 50%, transparent 70%);
 }
 
 /* 旧的暗黑模式样式（保留兼容） */
@@ -1755,34 +1801,60 @@ page {
 
 .score-number {
   font-family: var(--font-number);
-  font-size: 100rpx;
+  font-size: var(--font-size-huge);
   font-weight: 900;
-  color: var(--color-highlight);
+  /* 浅色主题：明黄色数值（#FFE135），轻薄白色描边+柔和投影，悬浮感 */
+  color: #FFE135;
   line-height: 1;
-  /* 艺术字描边+阴影 */
+  /* 大字号粗体 + 轻薄白色描边(1px) + 柔和阴影 */
   text-shadow:
-    3rpx 3rpx 0 #E67E22,
-    -2rpx -2rpx 0 #E67E22,
-    2rpx -2rpx 0 #E67E22,
-    -2rpx 2rpx 0 #E67E22,
-    0 6rpx 20rpx rgba(230, 126, 34, 0.4),
-    0 12rpx 40rpx rgba(0, 0, 0, 0.15);
-  -webkit-text-stroke: 2rpx #E67E22;
+    1rpx 1rpx 0 #fff,
+    -1rpx -1rpx 0 #fff,
+    1rpx -1rpx 0 #fff,
+    -1rpx 1rpx 0 #fff,
+    0 4rpx 8rpx rgba(221, 221, 221, 0.8);
+  -webkit-text-stroke: 1rpx #fff;
   letter-spacing: -4rpx;
-  animation: score-glow 2s ease-in-out infinite alternate;
 }
 
-@keyframes score-glow {
-  0% { filter: brightness(1); }
-  100% { filter: brightness(1.1); }
+/* 深色模式分数 - 高亮浅色（明黄#FFE135或浅天蓝#A2E3FC），确保对比度≥4.5:1 */
+.dark-mode .score-number {
+  color: #FFE135;  /* 明黄色 */
+  text-shadow:
+    0 0 10rpx rgba(255, 225, 53, 0.8),
+    0 0 20rpx rgba(255, 225, 53, 0.6),
+    0 0 40rpx rgba(255, 225, 53, 0.4);
+  -webkit-text-stroke: 1rpx rgba(255, 225, 53, 0.6);
+  animation: score-neon-glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes score-neon-glow {
+  0% {
+    filter: brightness(1);
+    text-shadow:
+      0 0 10rpx rgba(255, 225, 53, 0.8),
+      0 0 20rpx rgba(255, 225, 53, 0.6);
+  }
+  100% {
+    filter: brightness(1.15);
+    text-shadow:
+      0 0 15rpx rgba(255, 225, 53, 0.9),
+      0 0 30rpx rgba(255, 225, 53, 0.7),
+      0 0 50rpx rgba(255, 225, 53, 0.5);
+  }
 }
 
 .score-subtitle {
   font-family: var(--font-title);
   font-size: 24rpx;
-  color: var(--color-text);
-  opacity: 0.5;
+  /* 浅色：中灰辅助文字 */
+  color: #666666;
   margin-top: var(--spacing-xs);
+}
+
+.dark-mode .score-subtitle {
+  /* 深色：浅灰辅助文字 */
+  color: #999999;
 }
 
 /* 连击徽章 - 悬浮在分数旁 */
@@ -1791,10 +1863,12 @@ page {
   top: 50%;
   right: var(--spacing-lg);
   transform: translateY(-50%);
-  background: linear-gradient(135deg, var(--color-danger) 0%, #FF8E53 100%);
+  /* 浅色：浅色系气泡（白/浅黄） */
+  background: linear-gradient(135deg, #FFFFFF 0%, #FFF8E1 100%);
   padding: var(--spacing-xs) var(--spacing-md);
   border-radius: 30rpx;
-  box-shadow: 0 4rpx 16rpx rgba(255, 107, 107, 0.5);
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.1);
+  border: 1rpx solid rgba(255, 225, 53, 0.3);
   animation: combo-bounce 0.3s ease-out;
 }
 
@@ -1802,8 +1876,29 @@ page {
   font-family: var(--font-number);
   font-size: 32rpx;
   font-weight: 900;
-  color: #fff;
-  text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.3);
+  /* 浅色：橙红渐变文字 */
+  background: linear-gradient(135deg, #FF6B3E 0%, #E53935 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 深色模式连击徽章 */
+.dark-mode .combo-badge-float {
+  background: linear-gradient(135deg, #333333 0%, #2D2D2D 100%);
+  border: 1rpx solid rgba(255, 225, 53, 0.4);
+  box-shadow:
+    0 0 15rpx rgba(255, 225, 53, 0.2),
+    0 4rpx 16rpx rgba(0, 0, 0, 0.4);
+}
+
+.dark-mode .combo-x {
+  /* 深色：高亮浅色文字 */
+  background: linear-gradient(135deg, #FFE135 0%, #A2E3FC 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 4rpx rgba(255, 225, 53, 0.5));
 }
 
 @keyframes combo-bounce {
@@ -1854,23 +1949,45 @@ page {
 .combo-text-main {
   display: block;
   font-family: var(--font-number);
-  font-size: 48rpx;
+  font-size: 52rpx;
   font-weight: 900;
   font-style: italic;
   color: #fff;
-  /* 漫画风格渐变文字 */
-  background: linear-gradient(135deg, #FF6B6B 0%, #FF9A5C 50%, #FFD93D 100%);
+  /* 浅色主题：漫画气泡字体，橙红渐变 */
+  background: linear-gradient(135deg, #FF6B3E 0%, #FF4757 50%, #FF6B3E 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   text-shadow: none;
   filter: drop-shadow(3rpx 3rpx 0 #C0392B) drop-shadow(0 6rpx 12rpx rgba(0, 0, 0, 0.3));
   animation: combo-text-shake 0.1s ease-in-out 3;
+  /* 倾斜漫画风格 */
+  transform: skewX(-5deg);
 }
 
 @keyframes combo-text-shake {
-  0%, 100% { transform: rotate(-2deg); }
-  50% { transform: rotate(2deg); }
+  0%, 100% { transform: skewX(-5deg) rotate(-2deg); }
+  50% { transform: skewX(-5deg) rotate(2deg); }
+}
+
+/* 深色模式连击 - 尖锐机械/科幻字体，高亮发光 */
+.dark-mode .combo-text-main {
+  /* 霓虹橙/荧光绿效果 */
+  background: linear-gradient(135deg, #FFA500 0%, #00FF88 50%, #FFA500 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter:
+    drop-shadow(0 0 8rpx #FFA500)
+    drop-shadow(0 0 16rpx rgba(255, 165, 0, 0.6))
+    drop-shadow(0 0 32rpx rgba(0, 255, 136, 0.4));
+  animation: combo-neon-shake 0.1s ease-in-out 3;
+  transform: skewX(-8deg); /* 更尖锐的倾斜 */
+}
+
+@keyframes combo-neon-shake {
+  0%, 100% { transform: skewX(-8deg) rotate(-3deg) scale(1); }
+  50% { transform: skewX(-8deg) rotate(3deg) scale(1.05); }
 }
 
 /* 隐藏旧的分数卡片 */
@@ -2200,8 +2317,8 @@ page {
   right: 0;
   bottom: 0;
   height: 70vh;
-  /* 毛玻璃效果背景 */
-  background: rgba(255, 255, 255, 0.85);
+  /* 浅色主题：纯白背景，简洁明亮 */
+  background: #FFFFFF;
   backdrop-filter: blur(30rpx);
   -webkit-backdrop-filter: blur(30rpx);
   border-radius: 40rpx 40rpx 0 0;
@@ -2210,8 +2327,20 @@ page {
   flex-direction: column;
   transform: translateY(100%);
   transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 -16rpx 48rpx rgba(0, 0, 0, 0.15);
+  box-shadow: 0 -8rpx 32rpx rgba(0, 0, 0, 0.1);
   overflow: hidden;
+}
+
+/* 深色模式武器面板 - 深灰背景，避免压迫感 */
+.dark-mode .weapon-panel {
+  background: #1A1A1A;
+  box-shadow:
+    inset 0 1rpx 0 rgba(255, 255, 255, 0.05),
+    0 -8rpx 32rpx rgba(0, 0, 0, 0.5);
+}
+
+.dark-mode .weapon-panel-mask {
+  background: rgba(0, 0, 0, 0.6);
 }
 
 .weapon-panel.show {
@@ -2224,7 +2353,13 @@ page {
   flex-direction: column;
   align-items: center;
   padding: var(--spacing-md) var(--spacing-md) var(--spacing-sm);
-  background: linear-gradient(180deg, rgba(255, 107, 157, 0.1) 0%, transparent 100%);
+  /* 浅色：淡蓝渐变 */
+  background: linear-gradient(180deg, #EEF5FF 0%, #FFFFFF 100%);
+}
+
+/* 深色模式面板头部 - 科技感暗纹理 */
+.dark-mode .panel-header {
+  background: linear-gradient(180deg, #2D2D2D 0%, #1A1A1A 100%);
 }
 
 .panel-drag-indicator {
@@ -2235,19 +2370,37 @@ page {
   margin-bottom: var(--spacing-sm);
 }
 
+.dark-mode .panel-drag-indicator {
+  background: rgba(255, 255, 255, 0.2);
+}
+
 .panel-title {
   font-family: var(--font-title);
   font-size: 40rpx;
   font-weight: 700;
-  color: var(--color-text);
-  text-shadow: 0 2rpx 8rpx rgba(0,0,0,0.1);
+  /* 浅色：深灰文字 */
+  color: #333333;
+  text-shadow: none;
+}
+
+/* 深色模式标题 */
+.dark-mode .panel-title {
+  /* 深色：纯白文字 */
+  color: #FFFFFF;
+  text-shadow: none;
 }
 
 .panel-subtitle {
   font-family: var(--font-title);
   font-size: var(--font-size-small);
-  color: rgba(45, 52, 54, 0.6);
+  /* 浅色：中灰辅助文字 */
+  color: #666666;
   margin-top: 4rpx;
+}
+
+.dark-mode .panel-subtitle {
+  /* 深色：浅灰辅助文字 */
+  color: #999999;
 }
 
 /* 卡牌轮播区域 */
@@ -2269,12 +2422,14 @@ page {
   margin-left: var(--spacing-md);
 }
 
-/* 集换式卡牌设计 - 白色/浅灰卡片 */
+/* ========== 集换式卡牌设计 ========== */
+/* 浅色主题：纯白/极浅马卡龙色卡片 */
 .weapon-card {
   position: relative;
   width: 280rpx;
   height: 420rpx;
-  background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+  /* 浅色：纯白或极浅薄荷绿 */
+  background: linear-gradient(145deg, #FFFFFF 0%, #F5FAFA 100%);
   border-radius: 24rpx;
   padding: var(--spacing-sm);
   display: flex;
@@ -2283,18 +2438,37 @@ page {
   box-sizing: border-box;
   overflow: hidden;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 3rpx solid rgba(0, 0, 0, 0.08);
+  border: 3rpx solid rgba(0, 0, 0, 0.06);
   box-shadow:
-    0 8rpx 24rpx rgba(0, 0, 0, 0.1),
-    0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+    0 8rpx 24rpx rgba(0, 0, 0, 0.08),
+    0 2rpx 8rpx rgba(0, 0, 0, 0.04);
 }
 
-/* 选中状态 - 亮黄色粗边框 */
-.weapon-card.selected {
-  border: 4rpx solid var(--color-highlight);
+/* 深色模式武器卡片 */
+.dark-mode .weapon-card {
+  background: linear-gradient(145deg, #282828 0%, #1E1E1E 100%);
+  border-color: rgba(255, 165, 0, 0.15);
   box-shadow:
-    0 0 0 4rpx rgba(255, 217, 61, 0.3),
-    0 12rpx 32rpx rgba(255, 217, 61, 0.25);
+    0 8rpx 24rpx rgba(0, 0, 0, 0.4),
+    0 0 1rpx rgba(255, 165, 0, 0.1);
+}
+
+/* 浅色选中状态 - 活力橙粗边框 */
+.weapon-card.selected {
+  border: 4rpx solid var(--color-primary);
+  box-shadow:
+    0 0 0 4rpx rgba(255, 107, 62, 0.2),
+    0 12rpx 32rpx rgba(255, 107, 62, 0.2);
+  transform: translateY(-8rpx);
+}
+
+/* 深色模式选中状态 - 霓虹橙发光边框 */
+.dark-mode .weapon-card.selected {
+  border: 4rpx solid #FFA500;
+  box-shadow:
+    0 0 15rpx rgba(255, 165, 0, 0.5),
+    0 0 30rpx rgba(255, 165, 0, 0.2),
+    0 12rpx 32rpx rgba(0, 0, 0, 0.4);
   transform: translateY(-8rpx);
 }
 
@@ -2653,21 +2827,40 @@ page {
   width: 100%;
   text-align: center;
   padding: var(--spacing-md) 0;
-  /* 亮橙色大圆角按钮 */
-  background: linear-gradient(135deg, #FF9A5C 0%, #FF6B6B 100%);
+  /* 浅色主题：品牌警示红(#E53935)，确保关键操作醒目 */
+  background: linear-gradient(135deg, #E53935 0%, #FF5252 100%);
   border-radius: 30rpx;
   color: #fff;
   font-family: var(--font-title);
   font-size: 32rpx;
   font-weight: 700;
-  box-shadow: 0 6rpx 20rpx rgba(255, 154, 92, 0.4);
+  box-shadow: 0 6rpx 20rpx rgba(229, 57, 53, 0.35);
   transition: all 0.2s ease;
 }
 
 .close-panel-btn:active {
   opacity: 0.9;
   transform: scale(0.98);
-  box-shadow: 0 3rpx 12rpx rgba(255, 154, 92, 0.3);
+  box-shadow: 0 3rpx 12rpx rgba(229, 57, 53, 0.4);
+}
+
+/* 深色模式关闭按钮 - 低饱和暗色+亮边，避免"消失"问题 */
+.dark-mode .close-panel-btn {
+  /* #555555背景 + 白色描边，或#8B0000背景 + 浅红图标 */
+  background: linear-gradient(135deg, #8B0000 0%, #B71C1C 100%);
+  border: 1rpx solid rgba(255, 255, 255, 0.2);
+  box-shadow:
+    0 0 10rpx rgba(255, 68, 68, 0.2),
+    0 6rpx 20rpx rgba(0, 0, 0, 0.4);
+}
+
+.dark-mode .close-panel-btn:active {
+  /* 悬停/点击反馈：暗色背景+亮色图标 */
+  background: linear-gradient(135deg, #444444 0%, #555555 100%);
+  color: #FF4444;
+  box-shadow:
+    0 0 15rpx rgba(255, 68, 68, 0.3),
+    0 3rpx 12rpx rgba(0, 0, 0, 0.5);
 }
 
 /* ========== 浮现武器效果 ========== */
@@ -2720,16 +2913,15 @@ page {
   align-items: center;
   gap: var(--spacing-xs);
   padding: var(--spacing-sm) var(--spacing-md);
-  /* 毛玻璃效果 */
-  background: var(--glass-bg);
+  /* 浅色主题：白色底+浅灰边框，平衡识别度与轻量化 */
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border-radius: 40rpx;
-  border: 2rpx solid var(--glass-border);
+  border: 1rpx solid #E5E5E5;
   box-shadow:
-    0 8rpx 32rpx rgba(0, 0, 0, 0.1),
-    0 2rpx 8rpx rgba(0, 0, 0, 0.05),
-    inset 0 2rpx 4rpx rgba(255, 255, 255, 0.5);
+    0 4rpx 20rpx rgba(0, 0, 0, 0.08),
+    0 1rpx 4rpx rgba(0, 0, 0, 0.04);
 }
 
 .dock-item {
@@ -2746,34 +2938,32 @@ page {
   transform: scale(0.85) translateY(-8rpx);
 }
 
+/* 选中状态的Dock项 */
+.dock-item.active .dock-icon-wrap {
+  background: linear-gradient(145deg, #007AFF 0%, #48DBFB 100%);
+  border-color: transparent;
+}
+
+.dock-item.active .dock-label {
+  color: #007AFF;
+  opacity: 1;
+}
+
 .dock-icon-wrap {
   width: 64rpx;
   height: 64rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(145deg,
-    rgba(255, 107, 157, 0.2) 0%,
-    rgba(196, 74, 255, 0.15) 50%,
-    rgba(78, 205, 196, 0.2) 100%
-  );
+  /* 浅色主题：透明背景，中灰图标 */
+  background: transparent;
   border-radius: 20rpx;
-  border: 2rpx solid rgba(255, 255, 255, 0.4);
-  box-shadow:
-    0 4rpx 12rpx rgba(0, 0, 0, 0.08),
-    inset 0 2rpx 4rpx rgba(255, 255, 255, 0.6);
+  border: none;
   transition: all 0.2s ease;
 }
 
 .dock-item:active .dock-icon-wrap {
-  background: linear-gradient(145deg,
-    rgba(255, 107, 157, 0.35) 0%,
-    rgba(196, 74, 255, 0.3) 50%,
-    rgba(78, 205, 196, 0.35) 100%
-  );
-  box-shadow:
-    0 2rpx 8rpx rgba(0, 0, 0, 0.15),
-    inset 0 2rpx 4rpx rgba(255, 255, 255, 0.4);
+  background: rgba(0, 122, 255, 0.1);
 }
 
 .dock-icon {
@@ -2783,28 +2973,42 @@ page {
 .dock-label {
   font-family: var(--font-title);
   font-size: 18rpx;
-  color: var(--color-text);
-  opacity: 0.7;
+  /* 浅色主题：中灰文字 */
+  color: #888888;
   font-weight: 500;
 }
 
-/* 暗黑模式 Dock 栏 */
+/* ========== 深色模式 Dock 栏 - 高对比度、低压迫感 ========== */
 .dark-mode .floating-dock {
-  background: rgba(30, 39, 46, 0.75);
+  /* 深色：稍亮深色背景(#333333) */
+  background: rgba(51, 51, 51, 0.95);
   border-color: rgba(255, 255, 255, 0.1);
+  box-shadow:
+    inset 0 2rpx 4rpx rgba(0, 0, 0, 0.3),
+    0 4rpx 20rpx rgba(0, 0, 0, 0.4);
 }
 
 .dark-mode .dock-icon-wrap {
-  background: linear-gradient(145deg,
-    rgba(255, 107, 157, 0.25) 0%,
-    rgba(196, 74, 255, 0.2) 50%,
-    rgba(78, 205, 196, 0.25) 100%
-  );
-  border-color: rgba(255, 255, 255, 0.15);
+  background: transparent;
+  border: none;
+}
+
+.dark-mode .dock-item.active .dock-icon-wrap {
+  /* 深色选中：高亮浅色 */
+  background: linear-gradient(145deg, #48DBFB 0%, #A2E3FC 100%);
+}
+
+.dark-mode .dock-item.active .dock-label {
+  color: #48DBFB;
+}
+
+.dark-mode .dock-item:active .dock-icon-wrap {
+  background: rgba(72, 219, 251, 0.15);
 }
 
 .dark-mode .dock-label {
-  color: var(--color-text-light);
+  /* 深色：浅灰文字 */
+  color: #AAAAAA;
 }
 
 /* ========== 设置弹出菜单 ========== */
@@ -2836,12 +3040,13 @@ page {
   flex-direction: column;
   gap: var(--spacing-xs);
   padding: var(--spacing-sm);
-  background: var(--glass-bg);
+  /* 浅色主题：纯白背景 */
+  background: rgba(255, 255, 255, 0.98);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border-radius: var(--spacing-md);
-  border: 2rpx solid var(--glass-border);
-  box-shadow: 0 12rpx 40rpx rgba(0, 0, 0, 0.15);
+  border: 1rpx solid #E5E5E5;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.12);
   opacity: 0;
   pointer-events: none;
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -2858,14 +3063,15 @@ page {
   align-items: center;
   gap: var(--spacing-sm);
   padding: var(--spacing-sm) var(--spacing-md);
-  background: rgba(255, 255, 255, 0.5);
+  /* 浅色：极浅灰背景 */
+  background: #F8F8F8;
   border-radius: var(--spacing-sm);
   transition: all 0.2s ease;
   min-width: 240rpx;
 }
 
 .settings-item:active {
-  background: rgba(255, 107, 157, 0.2);
+  background: rgba(0, 122, 255, 0.1);
   transform: scale(0.98);
 }
 
@@ -2876,21 +3082,34 @@ page {
 .settings-text {
   font-family: var(--font-title);
   font-size: var(--font-size-body);
-  color: var(--color-text);
+  /* 浅色：深灰文字 */
+  color: #333333;
   font-weight: 500;
 }
 
-/* 暗黑模式设置菜单 */
+/* ========== 暗黑模式设置菜单 - 高对比度、低压迫感 ========== */
 .dark-mode .settings-menu {
-  background: rgba(30, 39, 46, 0.85);
+  /* 深色：稍亮深色背景(#333333) */
+  background: rgba(51, 51, 51, 0.98);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow:
+    inset 0 1rpx 0 rgba(255, 255, 255, 0.05),
+    0 8rpx 32rpx rgba(0, 0, 0, 0.5);
 }
 
 .dark-mode .settings-item {
-  background: rgba(255, 255, 255, 0.1);
+  /* 深色：更深的背景 */
+  background: #2D2D2D;
+  border: none;
+}
+
+.dark-mode .settings-item:active {
+  background: rgba(72, 219, 251, 0.15);
 }
 
 .dark-mode .settings-text {
-  color: var(--color-text-light);
+  /* 深色：纯白或浅灰 */
+  color: #FFFFFF;
 }
 
 /* ========== 成就荣誉墙面板 ========== */
