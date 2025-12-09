@@ -59,47 +59,21 @@
       </view>
 
       <view class="bag-container">
-        <!-- 3D包装层 - 增强物理形变 -->
-        <view class="bag-3d-wrapper {{bagShaking ? (bagExpression === 'crit' ? 'crit-hit' : 'hit-squash') : ''}}">
-          <!-- 表情图层叠加 -->
-          <block wx:if="{{!useCustomFace}}">
-            <image
-              class="bag-image bag-layer {{bagShaking ? 'shaking' : ''}} {{bagExpression === 'normal' ? 'active' : ''}}"
-              src="/images/bag_normal.png"
-              mode="aspectFit"
-            />
-            <image
-              class="bag-image bag-layer {{bagShaking ? 'shaking' : ''}} {{bagExpression === 'hit' ? 'active' : ''}} expression-hit"
-              src="/images/bag_hit.png"
-              mode="aspectFit"
-            />
-            <image
-              class="bag-image bag-layer {{bagShaking ? 'shaking' : ''}} {{bagExpression === 'crit' ? 'active' : ''}} expression-crit"
-              src="/images/bag_crit.png"
-              mode="aspectFit"
-            />
-            <image
-              class="bag-image bag-layer {{bagShaking ? 'shaking' : ''}} {{bagExpression === 'dizzy' ? 'active' : ''}} expression-dizzy"
-              src="/images/bag_dizzy.png"
-              mode="aspectFit"
-            />
-          </block>
-          <!-- 自定义头像模式 -->
-          <image
-            wx:if="{{useCustomFace}}"
-            class="bag-image {{bagShaking ? 'shaking' : ''}} expression-{{bagExpression}}"
-            src="{{customFaceUrl}}"
-            mode="aspectFill"
-          />
-          <!-- 点击提示涟漪 -->
-          <view class="tap-hint-ripple" wx:if="{{showTapHint}}">
-            <view class="ripple-ring r1"></view>
-            <view class="ripple-ring r2"></view>
-            <view class="ripple-ring r3"></view>
-          </view>
-        </view>
+        <!-- Canvas 2D 受气包 -->
+        <canvas
+          type="2d"
+          id="bag3d-canvas"
+          class="bag-3d-canvas"
+          canvas-id="bag3d-canvas"
+          disable-scroll="{{true}}"
+        ></canvas>
 
-        <!-- 动态脚底阴影 - 增强版 -->
+        <!-- 点击提示涟漪 -->
+        <view class="tap-hint-ripple" wx:if="{{showTapHint}}">
+          <view class="ripple-ring r1"></view>
+          <view class="ripple-ring r2"></view>
+          <view class="ripple-ring r3"></view>
+        </view>        <!-- 动态脚底阴影 - 增强版 -->
         <view class="bag-ground-shadow {{bagShaking ? 'shadow-squash' : ''}}">
           <view class="shadow-core"></view>
           <view class="shadow-blur"></view>

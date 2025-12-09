@@ -1,0 +1,19 @@
+{
+  "name": "shouqibao-miniprogram",
+  "version": "2.0.0",
+  "description": "受气包小程序 - 3D版本",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "miniprogram",
+    "threejs",
+    "game"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "threejs-miniprogram": "^0.0.8"
+  }
+}

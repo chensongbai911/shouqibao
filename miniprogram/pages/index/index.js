@@ -1,5 +1,6 @@
 // pages/index/index.js
 const AudioPool = require('../../utils/audio_pool.js');
+const Bag3DRenderer = require('../../utils/bag_3d.js');
 
 Page({
   data: {
@@ -169,6 +170,7 @@ Page({
   audioPool: null,
   bgmAudioContext: null,
   idleTimer: null,
+  bag3DRenderer: null,
 
   /**
    * 页面加载
@@ -185,8 +187,8 @@ Page({
     // 初始化音频池
     this.audioPool = new AudioPool();
 
-    // 预加载表情图片（提升切换流畅度）
-    this.preloadExpressionImages();
+    // 初始化 3D 渲染器
+    this.init3DRenderer();
 
     // 加载存储的数据
     this.loadGameData();
@@ -205,14 +207,36 @@ Page({
    * 预加载表情图片
    */
   preloadExpressionImages () {
-    const expressions = ['normal', 'hit', 'crit', 'dizzy'];
-    expressions.forEach(exp => {
-      const img = wx.getImageInfo({
-        src: `/images/bag_${exp}.png`,
-        success: () => console.log(`预加载成功: bag_${exp}.png`),
-        fail: (err) => console.warn(`预加载失败: bag_${exp}.png`, err)
+    // 已废弃 - 使用 3D 渲染器替代
+  },
+
+  /**
+   * 初始化 3D 渲染器
+   */
+  async init3DRenderer () {
+    const that = this;
+
+    wx.createSelectorQuery()
+      .select('#bag3d-canvas')
+      .node()
+      .exec((res) => {
+        if (res && res[0]) {
+          const canvas = res[0].node;
+
+          // 设置画布尺寸
+          const dpr = wx.getSystemInfoSync().pixelRatio;
+          const width = 300; // rpx 转 px
+          const height = 300;
+          canvas.width = width * dpr;
+          canvas.height = height * dpr;
+
+          // 创建 Canvas 2D 渲染器（无需 Three.js）
+          that.bag3DRenderer = new Bag3DRenderer(canvas, that);
+          that.bag3DRenderer.init();
+
+          console.log('3D 受气包渲染器初始化成功');
+        }
       });
-    });
   },
 
   /**
@@ -390,9 +414,17 @@ Page({
       duration = 1000;
     }
 
+    // 更新 3D 表情
+    if (this.bag3DRenderer) {
+      this.bag3DRenderer.changeExpression(expression);
+    }
+
     this.setData({ bagExpression: expression });
 
     this.expressionTimer = setTimeout(() => {
+      if (this.bag3DRenderer) {
+        this.bag3DRenderer.changeExpression('normal');
+      }
       this.setData({ bagExpression: 'normal' });
     }, duration);
   },
@@ -403,6 +435,11 @@ Page({
   showHitAnimation (isCrit = false) {
     // 设置动画状态
     this.setData({ bagShaking: true });
+
+    // 触发 3D 受击动画
+    if (this.bag3DRenderer) {
+      this.bag3DRenderer.hitAnimation(isCrit);
+    }
 
     // 根据是否暴击调整动画时长
     const duration = isCrit ? 500 : 300;
@@ -1131,6 +1168,12 @@ Page({
    * 页面卸载
    */
   onUnload () {
+    // 清理 3D 渲染器
+    if (this.bag3DRenderer) {
+      this.bag3DRenderer.dispose();
+      this.bag3DRenderer = null;
+    }
+
     if (this.bgmAudioContext) {
       this.bgmAudioContext.stop();
       this.bgmAudioContext.destroy();

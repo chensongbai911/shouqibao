@@ -630,6 +630,15 @@ page {
   }
 }
 
+/* 3D Canvas 受气包 */
+.bag-3d-canvas {
+  width: 600rpx;
+  height: 600rpx;
+  position: relative;
+  filter: drop-shadow(0 15rpx 40rpx rgba(0, 0, 0, 0.3));
+  transition: transform 0.15s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
 .bag-image {
   width: 100%;
   height: 100%;
