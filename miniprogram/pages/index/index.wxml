@@ -26,8 +26,9 @@
 
   <!-- 顶部HUD - 悬浮分数（无背景框） -->
   <view class="score-hud" style="padding-top: {{statusBarHeight + 10}}px;">
-    <!-- 左上角夜间模式（小图标，半透明） -->
+    <!-- 左上角夜间模式（增强可见性） -->
     <view class="top-left-btn" bindtap="toggleDarkMode">
+      <view class="mode-btn-bg"></view>
       <text class="mini-icon">{{darkMode ? '☀️' : '🌙'}}</text>
     </view>
 
@@ -35,6 +36,13 @@
     <view class="score-display">
       <text class="score-number">{{totalScore}}</text>
       <text class="score-subtitle" wx:if="{{todayScore > 0}}">今日 +{{todayScore}}</text>
+    </view>
+
+    <!-- 右上角武器展示 -->
+    <view class="top-right-weapon" bindtap="openWeaponPanel">
+      <view class="weapon-display-bg"></view>
+      <text class="weapon-display-icon">{{currentWeapon.icon}}</text>
+      <text class="weapon-display-damage">{{currentWeapon.damage}}</text>
     </view>
 
     <!-- 连击徽章（悬浮在分数旁） -->

@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sad Clay Ball - High Fidelity</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            /* 100% 还原原图背景：顶部青色 -> 底部紫色 */
+            background: linear-gradient(to bottom, #72f2eb 0%, #a2d9f7 40%, #908bf9 100%);
+        }
+        canvas { display: block; }
+        #loading {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            color: white; font-family: sans-serif; font-weight: bold;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">Generating Clay Texture...</div>
+
+    <!-- Import Three.js -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- 0. 材质纹理生成 (模拟粘土表面的不平整) ---
+        // 为了不依赖外部图片，我们用 Canvas 动态生成一张噪点图作为 Bump Map
+        function createNoiseTexture() {
+            const size = 512;
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+
+            const imageData = ctx.createImageData(size, size);
+            const data = imageData.data;
+
+            for (let i = 0; i < data.length; i += 4) {
+                const val = Math.floor(Math.random() * 255);
+                data[i] = val;     // R
+                data[i+1] = val;   // G
+                data[i+2] = val;   // B
+                data[i+3] = 255;   // A
+            }
+            ctx.putImageData(imageData, 0, 0);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            // 模糊一下噪点，让凹凸更自然像粘土
+            texture.minFilter = THREE.LinearFilter;
+            texture.magFilter = THREE.LinearFilter;
+            return texture;
+        }
+
+        const clayNoiseMap = createNoiseTexture();
+
+        // --- 1. 场景设置 ---
+        const scene = new THREE.Scene();
+
+        // 摄像机位置调整以匹配原图视角（轻微仰视/平视）
+        const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 0.5, 9.5);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        // 开启物理光照计算
+        renderer.physicallyCorrectLights = true;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.1;
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.SoftShadowMap;
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+
+        // --- 2. 灯光系统 (还原原图光影) ---
+
+        // 主光 (Key Light): 从右上前方打来，带来高光
+        const spotLight = new THREE.SpotLight(0xffffff, 800);
+        spotLight.position.set(5, 8, 8);
+        spotLight.angle = Math.PI / 4;
+        spotLight.penumbra = 0.5;
+        spotLight.castShadow = true;
+        spotLight.shadow.bias = -0.0001;
+        spotLight.shadow.mapSize.width = 2048; // 高质量阴影
+        spotLight.shadow.mapSize.height = 2048;
+        scene.add(spotLight);
+
+        // 补光 (Fill Light): 柔和的环境光，避免阴影死黑
+        const ambientLight = new THREE.AmbientLight(0xffd1dc, 0.5);
+        scene.add(ambientLight);
+
+        // 轮廓光 (Rim Light): 左侧强烈的冷光，勾勒边缘，这是原图立体感的关键
+        const rimLight = new THREE.SpotLight(0xbadfff, 1000); // 偏蓝的冷光
+        rimLight.position.set(-8, 2, -2);
+        rimLight.lookAt(0,0,0);
+        scene.add(rimLight);
+
+        // 底部反光 (Bounce Light): 模拟地面反色
+        const bottomLight = new THREE.PointLight(0x6e5ce6, 200);
+        bottomLight.position.set(0, -5, 2);
+        scene.add(bottomLight);
+
+        // --- 3. 材质定义 (High Fidelity Clay) ---
+
+        // 身体材质：粉色粘土
+        const bodyMat = new THREE.MeshPhysicalMaterial({
+            color: 0xffa8b8,      // 原图的粉色
+            roughness: 0.5,       // 粘土不是全反射
+            metalness: 0.0,
+            bumpMap: clayNoiseMap, // 关键：使用噪点图做凹凸
+            bumpScale: 0.015,     // 微微的凹凸感
+            clearcoat: 0.4,       // 表面有一层像手汗或油脂的光泽
+            clearcoatRoughness: 0.4,
+        });
+
+        // 斑点材质：稍亮一点的粉色，更有光泽
+        const spotMat = new THREE.MeshPhysicalMaterial({
+            color: 0xffbdd0,
+            roughness: 0.3,
+            metalness: 0.0,
+            clearcoat: 0.8,       // 斑点看起来更滑
+            clearcoatRoughness: 0.1,
+            bumpMap: clayNoiseMap,
+            bumpScale: 0.005
+        });
+
+        // 五官黑色材质：深紫黑色
+        const featureMat = new THREE.MeshPhysicalMaterial({
+            color: 0x2a1d25,
+            roughness: 0.3,
+            clearcoat: 0.5,
+        });
+
+        // 腮红材质
+        const cheekMat = new THREE.MeshBasicMaterial({
+            color: 0xff8da1,
+            transparent: true,
+            opacity: 0.7,
+        });
+
+        // --- 4. 建模 (Geometry) ---
+
+        const character = new THREE.Group();
+        scene.add(character);
+
+        // [身体] - 使用高分段球体
+        const bodyGeo = new THREE.SphereGeometry(2, 128, 128);
+        const body = new THREE.Mesh(bodyGeo, bodyMat);
+        body.castShadow = true;
+        body.receiveShadow = true;
+        character.add(body);
+
+        // [斑点] - 分布在身体上的扁平体
+        // 手动放置几个主要斑点以匹配原图感觉
+        const spotPositions = [
+            { x: 0, y: 1.6, z: 1.1, s: 0.6 },  // 头顶大斑点
+            { x: -1.3, y: 1.2, z: 0.8, s: 0.4 }, // 左上
+            { x: 1.4, y: 1.0, z: 0.9, s: 0.45 }, // 右上
+            { x: 0, y: -1.6, z: 1.0, s: 0.55 }, // 底部
+            { x: -1.5, y: -1.0, z: 0.5, s: 0.4 }, // 左下
+            { x: 1.5, y: -1.2, z: 0.5, s: 0.4 }, // 右下
+            { x: -0.8, y: 1.7, z: -0.5, s: 0.4 }, // 后侧装饰
+            { x: 0.8, y: 1.7, z: -0.5, s: 0.4 },
+        ];
+
+        spotPositions.forEach(pos => {
+            const spotGeo = new THREE.SphereGeometry(pos.s, 32, 32);
+            const spot = new THREE.Mesh(spotGeo, spotMat);
+            spot.position.set(pos.x, pos.y, pos.z);
+            // 让斑点朝向球心反方向
+            spot.lookAt(0,0,0);
+            // 压扁
+            spot.scale.set(1.2, 1.2, 0.2);
+            // 往外推一点点，贴合表面
+            spot.translateZ(-0.1);
+            character.add(spot);
+        });
+
+        // [眼睛] - 原图眼睛是稍微陷进去的黑色豆豆
+        const eyeGroup = new THREE.Group();
+        character.add(eyeGroup);
+
+        const eyeGeo = new THREE.SphereGeometry(0.32, 32, 32);
+
+        // 左眼
+        const leftEye = new THREE.Mesh(eyeGeo, featureMat);
+        leftEye.position.set(-0.55, 0.1, 1.85);
+        leftEye.scale.set(1, 1, 0.4); // 扁平贴合
+        leftEye.rotation.x = -0.2;
+        leftEye.rotation.y = -0.2;
+        eyeGroup.add(leftEye);
+
+        // 右眼
+        const rightEye = new THREE.Mesh(eyeGeo, featureMat);
+        rightEye.position.set(0.55, 0.1, 1.85);
+        rightEye.scale.set(1, 1, 0.4);
+        rightEye.rotation.x = -0.2;
+        rightEye.rotation.y = 0.2;
+        eyeGroup.add(rightEye);
+
+        // [高光] - 眼睛上的白色反光点，赋予灵魂
+        const highlightGeo = new THREE.SphereGeometry(0.08, 16, 16);
+        const highlightMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+        const h1 = new THREE.Mesh(highlightGeo, highlightMat);
+        h1.position.set(-0.15, 0.15, 0.25);
+        leftEye.add(h1);
+
+        const h2 = new THREE.Mesh(highlightGeo, highlightMat);
+        h2.position.set(-0.15, 0.15, 0.25); // 注意高光方向通常一致
+        rightEye.add(h2);
+
+
+        // [眉毛] - 悲伤的八字眉，贴在额头
+        const browGeo = new THREE.CapsuleGeometry(0.07, 0.45, 4, 16);
+
+        // 左眉
+        const leftBrow = new THREE.Mesh(browGeo, featureMat);
+        leftBrow.position.set(-0.6, 0.8, 1.82);
+        leftBrow.rotation.set(0, 0, -0.6); // 悲伤角度
+        leftBrow.rotation.x = -0.4; // 贴合球体曲率
+        character.add(leftBrow);
+
+        // 右眉
+        const rightBrow = new THREE.Mesh(browGeo, featureMat);
+        rightBrow.position.set(0.6, 0.8, 1.82);
+        rightBrow.rotation.set(0, 0, 0.6); // 悲伤角度
+        rightBrow.rotation.x = -0.4;
+        character.add(rightBrow);
+
+
+        // [嘴巴] - 倒U型，小小的
+        const mouthGeo = new THREE.TorusGeometry(0.25, 0.08, 12, 24, Math.PI);
+        const mouth = new THREE.Mesh(mouthGeo, featureMat);
+        mouth.position.set(0, -0.4, 1.95);
+        mouth.rotation.set(0, 0, Math.PI); // 倒过来
+        mouth.rotation.x = -0.3; // 贴合
+        character.add(mouth);
+
+        // [腮红]
+        const cheekGeo = new THREE.CircleGeometry(0.35, 32);
+
+        const c1 = new THREE.Mesh(cheekGeo, cheekMat);
+        c1.position.set(-1.1, -0.25, 1.78);
+        c1.rotation.y = -0.5;
+        character.add(c1);
+
+        const c2 = new THREE.Mesh(cheekGeo, cheekMat);
+        c2.position.set(1.1, -0.25, 1.78);
+        c2.rotation.y = 0.5;
+        character.add(c2);
+
+
+        // [手臂] - 紧紧抱住自己的胖乎乎的手臂
+        // 使用 TubeGeometry 或者 组合 Mesh 来模拟弯曲的手臂
+        // 这里用胶囊体+球体组合模拟“拳头”和“胳膊”
+
+        const armGroup = new THREE.Group();
+        character.add(armGroup);
+
+        function createFatArm(isLeft) {
+            const arm = new THREE.Group();
+
+            // 上臂
+            const limbGeo = new THREE.CapsuleGeometry(0.35, 0.8, 8, 16);
+            const limb = new THREE.Mesh(limbGeo, bodyMat);
+            limb.position.y = 0.4;
+            limb.castShadow = true;
+            arm.add(limb);
+
+            // 拳头/手掌
+            const handGeo = new THREE.SphereGeometry(0.4, 16, 16);
+            const hand = new THREE.Mesh(handGeo, bodyMat);
+            hand.position.y = 0.9;
+            hand.scale.set(1, 0.8, 1.2); // 压扁一点像拳头
+            arm.add(hand);
+
+            // 调整整体姿态
+            if (isLeft) {
+                arm.position.set(-1.6, -0.6, 0.8);
+                // 旋转让它看起来像抱在胸前
+                arm.rotation.z = -2.2; // 倒向身体
+                arm.rotation.x = 0.5;  // 向前
+                arm.rotation.y = -0.5;
+            } else {
+                arm.position.set(1.6, -0.6, 0.8);
+                arm.rotation.z = 2.2;
+                arm.rotation.x = 0.5;
+                arm.rotation.y = 0.5;
+            }
+            return arm;
+        }
+
+        const lArm = createFatArm(true);
+        armGroup.add(lArm);
+        const rArm = createFatArm(false);
+        armGroup.add(rArm);
+
+
+        // --- 5. 渲染循环 ---
+
+        // 增加一点极慢的呼吸感
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const time = Date.now() * 0.001;
+
+            // 身体微微起伏
+            character.position.y = Math.sin(time) * 0.05;
+
+            // 眼睛偶尔眨一下 (通过缩放模拟)
+            // 简单逻辑：每隔几秒，scale.y 变小一瞬间
+            // 这里为了保持悲伤凝视，暂时不做频繁眨眼，只保留呼吸
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        document.getElementById('loading').style.display = 'none';
+        animate();
+
+        // 窗口自适应
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

@@ -17,6 +17,7 @@ class Bag3DRenderer {
 
     // 3D 对象
     this.bagMesh = null;
+    this.body = null;
     this.eyeLeft = null;
     this.eyeRight = null;
     this.eyeHighlightLeft = null;
@@ -65,7 +66,8 @@ class Bag3DRenderer {
     // 创建相机
     const aspect = this.width / this.height;
     this.camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 1000);
-    this.camera.position.set(0, 0, 5);
+    this.camera.position.set(0, 0, 9.5);
+    this.camera.lookAt(0, 0, 0);
 
     // 创建渲染器
     this.renderer = new THREE.WebGLRenderer({
@@ -75,9 +77,19 @@ class Bag3DRenderer {
     });
     this.renderer.setSize(this.width, this.height);
     this.renderer.setPixelRatio(this.canvas.width / 300); // 根据实际尺寸调整
+    // 提升光照质量（在小程序里部分特性可能被忽略，但保持兼容判断）
+    if (typeof this.renderer.physicallyCorrectLights !== 'undefined') {
+      this.renderer.physicallyCorrectLights = true;
+    }
+    if (typeof this.renderer.toneMapping !== 'undefined' && this.THREE) {
+      this.renderer.toneMapping = this.THREE.ACESFilmicToneMapping;
+      this.renderer.toneMappingExposure = 1.1; // 与 index.html 保持一致
+    }
 
     // 创建受气包
     this.createBag();
+    this.recenterBag();
+    this.frameBag();
 
     // 添加灯光
     this.setupLights();
@@ -97,19 +109,28 @@ class Bag3DRenderer {
   setupLights () {
     const THREE = this.THREE;
 
-    // 环境光
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    // 主光（来自右上前方）
+    const keyLight = new THREE.SpotLight(0xffffff, 3);
+    keyLight.position.set(5, 8, 8);
+    keyLight.angle = Math.PI / 4;
+    keyLight.penumbra = 0.45;
+    keyLight.castShadow = true;
+    keyLight.shadow.bias = -0.0001;
+    this.scene.add(keyLight);
+
+    // 环境补光（柔和粉色）
+    const ambientLight = new THREE.AmbientLight(0xffd1dc, 0.55);
     this.scene.add(ambientLight);
 
-    // 主光源
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    directionalLight.position.set(2, 3, 5);
-    this.scene.add(directionalLight);
+    // 轮廓光（左侧冷光勾边）
+    const rimLight = new THREE.DirectionalLight(0xbadfff, 1.4);
+    rimLight.position.set(-6, 3, -2);
+    this.scene.add(rimLight);
 
-    // 补光
-    const fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
-    fillLight.position.set(-2, -1, 3);
-    this.scene.add(fillLight);
+    // 底部反光
+    const bottomLight = new THREE.PointLight(0x6e5ce6, 1.2, 30);
+    bottomLight.position.set(0, -5, 2);
+    this.scene.add(bottomLight);
   }
 
   /**
@@ -118,65 +139,185 @@ class Bag3DRenderer {
   createBag () {
     const THREE = this.THREE;
 
-    // 创建受气包主体（球体）
-    const radius = 1;
-    const segments = 32;
-    const geometry = new THREE.SphereGeometry(radius, segments, segments);
+    const clayNoiseMap = this.createClayNoiseTexture();
 
     // 材质
-    const material = new THREE.MeshStandardMaterial({
-      color: 0xD4A574, // 沙袋棕色
-      roughness: 0.7,
-      metalness: 0.1
+    const bodyMat = new THREE.MeshPhysicalMaterial({
+      color: 0xffa8b8,
+      roughness: 0.5,
+      metalness: 0.0,
+      bumpMap: clayNoiseMap,
+      bumpScale: 0.015,
+      clearcoat: 0.35,
+      clearcoatRoughness: 0.35
     });
 
-    this.bagMesh = new THREE.Mesh(geometry, material);
-    this.bagMesh.castShadow = true;
-    this.bagMesh.receiveShadow = true;
-    this.scene.add(this.bagMesh);
+    const spotMat = new THREE.MeshPhysicalMaterial({
+      color: 0xffbdd0,
+      roughness: 0.35,
+      metalness: 0.0,
+      bumpMap: clayNoiseMap,
+      bumpScale: 0.006,
+      clearcoat: 0.65,
+      clearcoatRoughness: 0.15
+    });
 
-    // 创建眼睛
-    this.createEyes();
+    const featureMat = new THREE.MeshPhysicalMaterial({
+      color: 0x2a1d25,
+      roughness: 0.35,
+      clearcoat: 0.4
+    });
 
-    // 创建嘴巴
-    this.createMouth();
+    const cheekMat = new THREE.MeshStandardMaterial({
+      color: 0xff8da1,
+      transparent: true,
+      opacity: 0.7
+    });
+
+    // 角色组
+    const bagGroup = new THREE.Group();
+    this.bagMesh = bagGroup;
+    this.bagMesh.position.set(0, 0, 0); // 明确居中
+    this.scene.add(bagGroup);
+
+    // 主体
+    const bodyGeo = new THREE.SphereGeometry(2, 96, 96);
+    this.body = new THREE.Mesh(bodyGeo, bodyMat);
+    this.body.castShadow = true;
+    this.body.receiveShadow = true;
+    bagGroup.add(this.body);
+
+    // 斑点
+    const spotPositions = [
+      { x: 0, y: 1.6, z: 1.1, s: 0.65 },
+      { x: -1.3, y: 1.2, z: 0.8, s: 0.45 },
+      { x: 1.4, y: 1.0, z: 0.9, s: 0.48 },
+      { x: 0, y: -1.6, z: 1.0, s: 0.58 },
+      { x: -1.5, y: -1.0, z: 0.5, s: 0.42 },
+      { x: 1.5, y: -1.2, z: 0.5, s: 0.42 },
+      { x: -0.8, y: 1.7, z: -0.5, s: 0.42 },
+      { x: 0.8, y: 1.7, z: -0.5, s: 0.42 }
+    ];
+
+    spotPositions.forEach(pos => {
+      const spotGeo = new THREE.SphereGeometry(pos.s, 32, 32);
+      const spot = new THREE.Mesh(spotGeo, spotMat);
+      spot.position.set(pos.x, pos.y, pos.z);
+      spot.lookAt(0, 0, 0);
+      spot.scale.set(1.2, 1.2, 0.22);
+      spot.translateZ(-0.12);
+      bagGroup.add(spot);
+    });
+
+    // 眼睛
+    this.createEyes(featureMat);
+
+    // 眉毛
+    this.createBrows(featureMat);
+
+    // 嘴巴
+    this.createMouth(featureMat);
+
+    // 腮红
+    this.createCheeks(cheekMat);
+
+    // 手臂
+    this.createArms(bodyMat);
+
+    // 生成完成后重新居中
+    this.recenterBag();
+  }
+
+  /**
+   * 生成粘土噪点纹理（不依赖 DOM）
+   */
+  createClayNoiseTexture () {
+    const THREE = this.THREE;
+    const size = 256;
+    const data = new Uint8Array(size * size * 4);
+    for (let i = 0; i < data.length; i += 4) {
+      const v = Math.floor(Math.random() * 255);
+      data[i] = v;
+      data[i + 1] = v;
+      data[i + 2] = v;
+      data[i + 3] = 255;
+    }
+    const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+    texture.needsUpdate = true;
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.generateMipmaps = false;
+    return texture;
   }
 
   /**
    * 创建眼睛
    */
-  createEyes () {
+  createEyes (featureMat) {
     const THREE = this.THREE;
 
+    const eyeGroup = new THREE.Group();
+    this.bagMesh.add(eyeGroup);
+
+    const eyeGeometry = new THREE.SphereGeometry(0.32, 32, 32);
+    const eyeMaterial = featureMat || new THREE.MeshBasicMaterial({ color: 0x000000 });
+
     // 左眼
-    const eyeGeometry = new THREE.SphereGeometry(0.15, 16, 16);
-    const eyeMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
     this.eyeLeft = new THREE.Mesh(eyeGeometry, eyeMaterial);
-    this.eyeLeft.position.set(-0.35, 0.2, 0.85);
-    this.scene.add(this.eyeLeft);
+    this.eyeLeft.position.set(-0.55, 0.1, 1.85);
+    this.eyeLeft.scale.set(1, 1, 0.4);
+    this.eyeLeft.rotation.x = -0.2;
+    this.eyeLeft.rotation.y = -0.2;
+    eyeGroup.add(this.eyeLeft);
 
     // 左眼神光（作为左眼的子对象）
-    const highlightGeometry = new THREE.SphereGeometry(0.05, 8, 8);
+    const highlightGeometry = new THREE.SphereGeometry(0.08, 16, 16);
     const highlightMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
     this.eyeHighlightLeft = new THREE.Mesh(highlightGeometry, highlightMaterial);
-    this.eyeHighlightLeft.position.set(-0.03, 0.02, 0.05); // 相对于眼睛的位置
+    this.eyeHighlightLeft.position.set(-0.15, 0.15, 0.25); // 相对于眼睛的位置
     this.eyeLeft.add(this.eyeHighlightLeft);
 
     // 右眼
     this.eyeRight = new THREE.Mesh(eyeGeometry, eyeMaterial);
-    this.eyeRight.position.set(0.35, 0.2, 0.85);
-    this.scene.add(this.eyeRight);
+    this.eyeRight.position.set(0.55, 0.1, 1.85);
+    this.eyeRight.scale.set(1, 1, 0.4);
+    this.eyeRight.rotation.x = -0.2;
+    this.eyeRight.rotation.y = 0.2;
+    eyeGroup.add(this.eyeRight);
 
     // 右眼神光（作为右眼的子对象）
     this.eyeHighlightRight = new THREE.Mesh(highlightGeometry, highlightMaterial);
-    this.eyeHighlightRight.position.set(-0.03, 0.02, 0.05); // 相对于眼睛的位置
+    this.eyeHighlightRight.position.set(-0.15, 0.15, 0.25); // 相对于眼睛的位置
     this.eyeRight.add(this.eyeHighlightRight);
+  }
+
+  /**
+   * 创建眉毛
+   */
+  createBrows (featureMat) {
+    const THREE = this.THREE;
+    const useCapsule = typeof THREE.CapsuleGeometry !== 'undefined';
+    const browGeo = useCapsule
+      ? new THREE.CapsuleGeometry(0.07, 0.45, 4, 16)
+      : new THREE.CylinderGeometry(0.07, 0.07, 0.7, 12);
+
+    const leftBrow = new THREE.Mesh(browGeo, featureMat);
+    leftBrow.position.set(-0.6, 0.8, 1.82);
+    leftBrow.rotation.set(-0.4, 0, -0.6);
+    this.bagMesh.add(leftBrow);
+
+    const rightBrow = new THREE.Mesh(browGeo, featureMat);
+    rightBrow.position.set(0.6, 0.8, 1.82);
+    rightBrow.rotation.set(-0.4, 0, 0.6);
+    this.bagMesh.add(rightBrow);
   }
 
   /**
    * 创建嘴巴
    */
-  createMouth () {
+  createMouth (featureMat) {
     const THREE = this.THREE;
 
     // 使用曲线创建嘴巴
@@ -184,23 +325,85 @@ class Bag3DRenderer {
 
     // 创建嘴巴曲线
     const points = [];
-    const mouthWidth = 0.4;
-    const mouthY = -0.2;
+    const mouthWidth = 0.5;
+    const mouthY = -0.4;
 
-    for (let i = 0; i <= 20; i++) {
-      const t = i / 20;
+    for (let i = 0; i <= 24; i++) {
+      const t = i / 24;
       const x = (t - 0.5) * mouthWidth * 2;
-      const y = mouthY + Math.sin(t * Math.PI) * 0.1 * this.mouthCurve;
-      points.push(new THREE.Vector3(x, y, 0.85));
+      const y = mouthY + Math.sin(t * Math.PI) * 0.12 * this.mouthCurve;
+      points.push(new THREE.Vector3(x, y, 1.95));
     }
 
     const curve = new THREE.CatmullRomCurve3(points);
-    const tubeGeometry = new THREE.TubeGeometry(curve, 20, 0.03, 8, false);
-    const tubeMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    const tubeGeometry = new THREE.TubeGeometry(curve, 32, 0.08, 12, false);
+    const tubeMaterial = featureMat || new THREE.MeshBasicMaterial({ color: 0x000000 });
     const mouthTube = new THREE.Mesh(tubeGeometry, tubeMaterial);
+    mouthTube.rotation.z = Math.PI; // 倒 U 形
     this.mouthGroup.add(mouthTube);
 
-    this.scene.add(this.mouthGroup);
+    this.bagMesh.add(this.mouthGroup);
+    this.recenterBag();
+    this.frameBag();
+  }
+
+  /**
+   * 创建腮红
+   */
+  createCheeks (cheekMat) {
+    const THREE = this.THREE;
+    const cheekGeo = new THREE.CircleGeometry(0.35, 32);
+
+    const c1 = new THREE.Mesh(cheekGeo, cheekMat);
+    c1.position.set(-1.1, -0.25, 1.78);
+    c1.rotation.y = -0.5;
+    this.bagMesh.add(c1);
+
+    const c2 = new THREE.Mesh(cheekGeo, cheekMat);
+    c2.position.set(1.1, -0.25, 1.78);
+    c2.rotation.y = 0.5;
+    this.bagMesh.add(c2);
+  }
+
+  /**
+   * 创建手臂
+   */
+  createArms (bodyMat) {
+    const THREE = this.THREE;
+    const armGroup = new THREE.Group();
+    this.bagMesh.add(armGroup);
+
+    const useCapsule = typeof THREE.CapsuleGeometry !== 'undefined';
+    const limbGeo = useCapsule
+      ? new THREE.CapsuleGeometry(0.35, 0.8, 8, 16)
+      : new THREE.CylinderGeometry(0.35, 0.35, 1.2, 16);
+    const handGeo = new THREE.SphereGeometry(0.4, 16, 16);
+
+    const createArm = (isLeft) => {
+      const arm = new THREE.Group();
+
+      const limb = new THREE.Mesh(limbGeo, bodyMat);
+      limb.position.y = 0.4;
+      limb.castShadow = true;
+      arm.add(limb);
+
+      const hand = new THREE.Mesh(handGeo, bodyMat);
+      hand.position.y = 0.9;
+      hand.scale.set(1, 0.8, 1.2);
+      arm.add(hand);
+
+      if (isLeft) {
+        arm.position.set(-1.6, -0.6, 0.8);
+        arm.rotation.set(0.5, -0.5, -2.2);
+      } else {
+        arm.position.set(1.6, -0.6, 0.8);
+        arm.rotation.set(0.5, 0.5, 2.2);
+      }
+      return arm;
+    };
+
+    armGroup.add(createArm(true));
+    armGroup.add(createArm(false));
   }
 
   /**
@@ -275,13 +478,17 @@ class Bag3DRenderer {
     const THREE = this.THREE;
 
     // 移除旧的嘴巴
-    this.scene.remove(this.mouthGroup);
+    if (this.bagMesh) {
+      this.bagMesh.remove(this.mouthGroup);
+    } else {
+      this.scene.remove(this.mouthGroup);
+    }
     this.mouthGroup = new THREE.Group();
 
     // 创建新的嘴巴曲线
     const points = [];
-    const mouthWidth = 0.4;
-    const mouthY = -0.2;
+    const mouthWidth = 0.5;
+    const mouthY = -0.4;
 
     for (let i = 0; i <= 20; i++) {
       const t = i / 20;
@@ -294,16 +501,52 @@ class Bag3DRenderer {
         // 悲伤/惊讶
         y = mouthY - Math.sin(t * Math.PI) * 0.1 * Math.abs(this.mouthCurve);
       }
-      points.push(new THREE.Vector3(x, y, 0.85));
+      points.push(new THREE.Vector3(x, y, 1.95));
     }
 
     const curve = new THREE.CatmullRomCurve3(points);
-    const tubeGeometry = new THREE.TubeGeometry(curve, 20, 0.03, 8, false);
+    const tubeGeometry = new THREE.TubeGeometry(curve, 24, 0.08, 12, false);
     const tubeMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
     const mouthTube = new THREE.Mesh(tubeGeometry, tubeMaterial);
+    mouthTube.rotation.z = Math.PI;
     this.mouthGroup.add(mouthTube);
 
-    this.scene.add(this.mouthGroup);
+    if (this.bagMesh) {
+      this.bagMesh.add(this.mouthGroup);
+    } else {
+      this.scene.add(this.mouthGroup);
+    }
+    this.recenterBag();
+    this.frameBag();
+  }
+
+  /**
+   * 根据当前模型包围盒将模型整体移到原点，保持上下左右居中
+   */
+  recenterBag () {
+    if (!this.bagMesh || !this.THREE) return;
+    const THREE = this.THREE;
+    const box = new THREE.Box3().setFromObject(this.bagMesh);
+    const center = new THREE.Vector3();
+    box.getCenter(center);
+    this.bagMesh.position.sub(center);
+    if (this.camera) {
+      this.camera.lookAt(0, 0, 0);
+    }
+  }
+
+  /**
+   * 根据模型大小重设相机距离，确保画面中心对齐并填充视野
+   */
+  frameBag () {
+    if (!this.bagMesh || !this.camera || !this.THREE) return;
+    const THREE = this.THREE;
+    const box = new THREE.Box3().setFromObject(this.bagMesh);
+    const sphere = box.getBoundingSphere(new THREE.Sphere());
+    const fov = this.camera.fov * Math.PI / 180;
+    const distance = sphere.radius / Math.sin(fov / 2);
+    this.camera.position.set(0, 0, distance * 1.15);
+    this.camera.lookAt(0, 0, 0);
   }
 
   /**
