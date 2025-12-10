@@ -59,9 +59,9 @@
       </view>
 
       <view class="bag-container">
-        <!-- Canvas 2D 受气包 -->
+        <!-- Canvas WebGL 受气包 -->
         <canvas
-          type="2d"
+          type="webgl"
           id="bag3d-canvas"
           class="bag-3d-canvas"
           canvas-id="bag3d-canvas"

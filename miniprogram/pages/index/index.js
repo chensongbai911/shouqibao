@@ -230,7 +230,7 @@ Page({
           canvas.width = width * dpr;
           canvas.height = height * dpr;
 
-          // 创建 Canvas 2D 渲染器（无需 Three.js）
+          // 创建 Three.js 3D 渲染器
           that.bag3DRenderer = new Bag3DRenderer(canvas, that);
           that.bag3DRenderer.init();
 
