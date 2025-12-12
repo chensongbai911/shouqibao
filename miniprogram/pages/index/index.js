@@ -1,6 +1,8 @@
 // pages/index/index.js
 const AudioPool = require('../../utils/audio_pool.js');
 const Bag3DRenderer = require('../../utils/bag_3d.js');
+const ParticlePool = require('../../utils/particle_pool.js');
+const WeaponEffectSystem = require('../../utils/weapon_effect_system.js');
 
 Page({
   data: {
@@ -31,37 +33,43 @@ Page({
         id: 'hand', name: '铁拳', damage: 10, icon: '👊', unlockScore: 0,
         rarity: 'common', attackStars: 1, speedStars: 3, critStars: 1,
         description: '最基础的武器，但永远可靠',
-        color: '#9E9E9E'  // 普通灰
+        color: '#9E9E9E',
+        effect: { type: 'none' }
       },
       {
         id: 'phone', name: '愤怒手机', damage: 15, icon: '📱', unlockScore: 50,
         rarity: 'common', attackStars: 1, speedStars: 3, critStars: 2,
         description: '摔了无数次依然坚挺',
-        color: '#2196F3'  // 蓝色
+        color: '#2196F3',
+        effect: { type: 'none' }
       },
       {
         id: 'keyboard', name: '机械键盘', damage: 20, icon: '⌨️', unlockScore: 100,
         rarity: 'uncommon', attackStars: 2, speedStars: 2, critStars: 2,
         description: '程序员的愤怒之源',
-        color: '#4CAF50'  // 绿色
+        color: '#4CAF50',
+        effect: { type: 'multi_hit', proc: 0.2, count: 2, damageScale: 0.5 }
       },
       {
         id: 'chair', name: '人体工学椅', damage: 30, icon: '🪑', unlockScore: 300,
         rarity: 'uncommon', attackStars: 3, speedStars: 1, critStars: 2,
         description: '久坐族的复仇武器',
-        color: '#4CAF50'
+        color: '#4CAF50',
+        effect: { type: 'crit_boost', proc: 0.3, scale: 0.5 }
       },
       {
         id: 'hammer', name: '正义之锤', damage: 50, icon: '🔨', unlockScore: 500,
         rarity: 'rare', attackStars: 4, speedStars: 1, critStars: 3,
         description: '一锤定音，气消云散',
-        color: '#9C27B0'  // 紫色
+        color: '#9C27B0',
+        effect: { type: 'aoe_damage', proc: 0.15, radius: 200, scale: 1.5 }
       },
       {
         id: 'baseball', name: '全垒打棒', damage: 100, icon: '⚾', unlockScore: 1000,
         rarity: 'epic', attackStars: 5, speedStars: 2, critStars: 4,
         description: '送你一记本垒打！',
-        color: '#FF9800'  // 橙色
+        color: '#FF9800',
+        effect: { type: 'combo_accumulate', maxScale: 2.5 }
       }
     ],
     // 特殊武器（需要成就或分享解锁）- 传说级
@@ -71,28 +79,32 @@ Page({
         unlockType: 'achievement', unlockCondition: '累计伤害5000', unlocked: false,
         rarity: 'legendary', attackStars: 5, speedStars: 1, critStars: 5,
         description: '爆发你所有的怒气！',
-        color: '#F44336'  // 红色
+        color: '#F44336',
+        effect: { type: 'aoe_damage', proc: 0.25, radius: 250, scale: 2.0 }
       },
       {
         id: 'rocket', name: '出气火箭', damage: 200, icon: '🚀',
         unlockType: 'share', unlockCondition: '分享3次', unlocked: false,
         rarity: 'legendary', attackStars: 5, speedStars: 3, critStars: 4,
         description: '让烦恼飞向太空',
-        color: '#F44336'
+        color: '#F44336',
+        effect: { type: 'combo_accumulate', maxScale: 3.0 }
       },
       {
         id: 'lightning', name: '雷神之怒', damage: 250, icon: '⚡',
         unlockType: 'achievement', unlockCondition: '连击20次', unlocked: false,
         rarity: 'legendary', attackStars: 5, speedStars: 5, critStars: 3,
         description: '以闪电之速释放怒火',
-        color: '#F44336'
+        color: '#F44336',
+        effect: { type: 'crit_boost', proc: 0.5, scale: 1.0 }
       },
       {
         id: 'nuke', name: '终极核弹', damage: 500, icon: '☢️',
         unlockType: 'achievement', unlockCondition: '累计伤害10000', unlocked: false,
         rarity: 'mythic', attackStars: 5, speedStars: 1, critStars: 5,
         description: '毁灭一切烦恼的终极武器',
-        color: '#FFD700'  // 金色
+        color: '#FFD700',
+        effect: { type: 'aoe_damage', proc: 0.3, radius: 300, scale: 3.0 }
       }
     ],
     // 武器面板状态
@@ -164,13 +176,30 @@ Page({
 
     // 长按连击
     longPressTimer: null,
-    isLongPressing: false
+    isLongPressing: false,
+
+    // 空闲嘲讽
+    showTauntMessage: false,
+    tauntText: '',
+
+    // 连击倍增相关
+    comboDamageBoost: 1.0  // 当前连击伤害倍增系数
   },
 
   audioPool: null,
   bgmAudioContext: null,
   idleTimer: null,
   bag3DRenderer: null,
+  particlePool: null,  // 粒子对象池
+
+  // 嘲讽文本库
+  tauntMessages: [
+    { text: '没劲儿~', sound: 'taunt1' },
+    { text: '就这样啊', sound: 'taunt2' },
+    { text: '打我啊~', sound: 'taunt3' },
+    { text: '太弱了', sound: 'taunt1' },
+    { text: '继续加油~', sound: 'taunt2' }
+  ],
 
   /**
    * 页面加载
@@ -186,6 +215,12 @@ Page({
 
     // 初始化音频池
     this.audioPool = new AudioPool();
+
+    // 初始化粒子对象池
+    this.particlePool = new ParticlePool(100);
+
+    // 初始化武器特效系统
+    this.weaponEffectSystem = new WeaponEffectSystem();
 
     // 初始化 3D 渲染器
     this.init3DRenderer();
@@ -319,9 +354,25 @@ Page({
     // 检测连续点击（暴怒模式）
     this.checkRageMode();
 
-    // 1. 计算伤害
+    // 1. 计算伤害 - 应用连击倍增系数 + 武器特效
     const rageFactor = this.data.rageMode ? 2 : 1;
-    const actualDamage = Math.floor(isCrit ? damage * 2 * rageFactor : damage * rageFactor);
+    const comboDamageMultiplier = this.getComboDamageMultiplier(this.data.comboCount);
+    const baseDamage = isCrit ? damage * 2 : damage;
+    const buffedBaseDamage = Math.floor(baseDamage * rageFactor * comboDamageMultiplier);
+
+    // 执行武器特效
+    const effectContext = {
+      damage: buffedBaseDamage,
+      baseDamage: damage,
+      isCrit: isCrit,
+      comboCount: this.data.comboCount,
+      rageMode: this.data.rageMode
+    };
+    const effectResult = this.weaponEffectSystem.executeEffect(this.data.currentWeapon, effectContext);
+    const specialEffectDamage = effectResult.damage;
+    const weaponEffects = effectResult.effects;
+
+    const actualDamage = buffedBaseDamage + specialEffectDamage;
     const newScore = this.data.totalScore + actualDamage;
     const newTodayScore = this.data.todayScore + actualDamage;
 
@@ -506,35 +557,40 @@ Page({
   },
 
   /**
-   * 创建粒子特效
+   * 创建粒子特效 - 使用对象池优化
    */
   createParticles (position, isCrit) {
     const particleCount = isCrit ? 12 : 6;
-    const newParticles = [];
+    const newParticleIds = [];
 
     for (let i = 0; i < particleCount; i++) {
       const angle = (Math.PI * 2 * i) / particleCount;
       const speed = 100 + Math.random() * 100;
       const size = isCrit ? 30 + Math.random() * 20 : 20 + Math.random() * 10;
 
-      newParticles.push({
-        id: this.data.nextParticleId++,
-        x: position.x,
-        y: position.y,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        size: size,
-        color: isCrit ? '#FF4500' : '#FFD700',
-        rotation: Math.random() * 360
-      });
+      const particle = this.particlePool.acquire(
+        position.x,
+        position.y,
+        Math.cos(angle) * speed,
+        Math.sin(angle) * speed,
+        size,
+        isCrit ? '#FF4500' : '#FFD700',
+        Math.random() * 360
+      );
+
+      newParticleIds.push(particle.id);
     }
 
     this.setData({
-      particles: [...this.data.particles, ...newParticles]
+      particles: this.particlePool.getActive()
     });
 
+    // 600ms 后释放粒子
     setTimeout(() => {
-      this.removeParticles(newParticles.map(p => p.id));
+      this.particlePool.releaseMany(newParticleIds);
+      this.setData({
+        particles: this.particlePool.getActive()
+      });
     }, 600);
   },
 
@@ -683,9 +739,80 @@ Page({
       // 重置连击
       this.setData({
         comboCount: 0,
-        comboDamageTotal: 0
+        comboDamageTotal: 0,
+        comboDamageBoost: 1.0
       });
     }, 1000);
+  },
+
+  /**
+   * 计算连击伤害倍增系数
+   */
+  getComboDamageMultiplier (comboCount) {
+    if (comboCount < 5) return 1.0;      // 1-4 连击：无倍增
+    if (comboCount < 10) return 1.2;     // 5-9 连击：20% 倍增
+    if (comboCount < 20) return 1.5;     // 10-19 连击：50% 倍增
+    if (comboCount < 30) return 2.0;     // 20-29 连击：100% 倍增
+    if (comboCount < 50) return 2.5;     // 30-49 连击：150% 倍增
+    return 3.0;                          // 50+ 连击：200% 倍增
+  },
+
+  /**
+   * 启动空闲计时器 - 触发嘲讽系统
+   */
+  startIdleTimer () {
+    this.clearIdleTimer();
+    this.idleTimer = setTimeout(() => {
+      this.triggerTaunt();
+    }, 5000);
+  },
+
+  /**
+   * 重置空闲计时器
+   */
+  resetIdleTimer () {
+    this.clearIdleTimer();
+    this.startIdleTimer();
+  },
+
+  /**
+   * 清除空闲计时器
+   */
+  clearIdleTimer () {
+    if (this.idleTimer) {
+      clearTimeout(this.idleTimer);
+      this.idleTimer = null;
+    }
+  },
+
+  /**
+   * 触发嘲讽消息
+   */
+  triggerTaunt () {
+    if (this.data.totalScore === 0) {
+      return; // 没有进行游戏时不嘲讽
+    }
+
+    const taunt = this.tauntMessages[Math.floor(Math.random() * this.tauntMessages.length)];
+
+    this.setData({
+      showTauntMessage: true,
+      tauntText: taunt.text
+    });
+
+    // 尝试播放嘲讽音效
+    if (this.audioPool) {
+      const tauntAudioPath = `/audio/${taunt.sound}.mp3`;
+      this.audioPool.play(tauntAudioPath);
+    }
+
+    // 显示 2 秒后隐藏
+    setTimeout(() => {
+      this.setData({ showTauntMessage: false });
+    }, 2000);
+
+    // 继续启动空闲计时器
+    this.startIdleTimer();
   },
 
   /**
@@ -1172,6 +1299,12 @@ Page({
     if (this.bag3DRenderer) {
       this.bag3DRenderer.dispose();
       this.bag3DRenderer = null;
+    }
+
+    // 清理粒子对象池
+    if (this.particlePool) {
+      this.particlePool.clear();
+      this.particlePool = null;
     }
 
     if (this.bgmAudioContext) {

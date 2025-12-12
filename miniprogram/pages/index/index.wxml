@@ -36,6 +36,8 @@
     <view class="score-display">
       <text class="score-number">{{totalScore}}</text>
       <text class="score-subtitle" wx:if="{{todayScore > 0}}">今日 +{{todayScore}}</text>
+      <!-- 连击倍增指示器 -->
+      <text class="combo-boost-indicator" wx:if="{{comboDamageBoost > 1}}">×{{comboDamageBoost.toFixed(1)}}</text>
     </view>
 
     <!-- 右上角武器展示 -->
@@ -54,6 +56,13 @@
   <!-- 暴怒模式指示器 -->
   <view wx:if="{{rageMode}}" class="rage-indicator-float">
     🔥 暴怒模式 🔥
+  </view>
+
+  <!-- 空闲嘲讽消息 -->
+  <view class="taunt-message-popup {{showTauntMessage ? 'show' : ''}}">
+    <view class="taunt-bubble">
+      <text class="taunt-text">{{tauntText}}</text>
+    </view>
   </view>
 
   <!-- 主要内容区域 -->
