@@ -329,7 +329,13 @@ Page({
 
           console.log('3D 受气包渲染器初始化成功');
 
-          // 3D 渲染器初始化完成后，再初始化包库
+          // 3D 渲染器初始化完成后，恢复之前保存的包模型
+          const savedBagModelId = wx.getStorageSync('currentBagModelId') || 'classical';
+          if (savedBagModelId !== 'classical') {
+            that.bag3DRenderer.changeBagModel(savedBagModelId);
+          }
+
+          // 然后初始化包库
           that.initBagLibrary();
         }
       });
@@ -342,6 +348,7 @@ Page({
     const totalScore = wx.getStorageSync('totalScore') || 0;
     const currentWeaponId = wx.getStorageSync('currentWeapon') || 'hand';
     const customFaceUrl = wx.getStorageSync('customFaceUrl') || '';
+    const currentBagModelId = wx.getStorageSync('currentBagModelId') || 'classical';
 
     // 加载今日伤害
     const todayKey = this.getTodayKey();
@@ -354,7 +361,8 @@ Page({
       todayScore,
       currentWeapon,
       useCustomFace: !!customFaceUrl,
-      customFaceUrl
+      customFaceUrl,
+      currentBagModelId
     });
   },
 
@@ -364,6 +372,17 @@ Page({
   getTodayKey () {
     const now = new Date();
     return `todayScore_${now.getFullYear()}_${now.getMonth() + 1}_${now.getDate()}`;
+  },
+
+  /**
+   * 保存游戏数据
+   */
+  saveGameData () {
+    wx.setStorageSync('totalScore', this.data.totalScore);
+    wx.setStorageSync('currentWeapon', this.data.currentWeapon.id);
+    wx.setStorageSync('currentBagModelId', this.data.currentBagModelId);
+    wx.setStorageSync('customFaceUrl', this.data.customFaceUrl);
+    wx.setStorageSync(this.getTodayKey(), this.data.todayScore);
   },
 
   /**
