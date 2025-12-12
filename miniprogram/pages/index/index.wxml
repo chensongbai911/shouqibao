@@ -567,15 +567,9 @@
           class="bag-lib-item {{currentBagModelId === item.id ? 'selected' : ''}}"
           bindtap="selectBagModel"
           data-id="{{item.id}}">
-          <!-- 包的3D预览（缩小版Canvas） -->
+          <!-- 包的3D预览（简化为图标） -->
           <view class="bag-preview-container">
-            <canvas
-              type="webgl"
-              class="bag-preview-canvas"
-              id="bag-preview-{{item.id}}"
-              canvas-id="bag-preview-{{item.id}}"
-              disable-scroll="true"
-            ></canvas>
+            <view class="bag-preview-icon">🎒</view>
             <!-- 选中勾选标记 -->
             <view wx:if="{{currentBagModelId === item.id}}" class="bag-selected-badge">
               <text class="badge-icon">✓</text>

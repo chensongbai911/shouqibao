@@ -255,9 +255,6 @@ Page({
     // 初始化背景音乐
     this.initBGM();
 
-    // 初始化包库
-    this.initBagLibrary();
-
     // 启动空闲计时器
     this.startIdleTimer();
   },
@@ -331,6 +328,9 @@ Page({
           that.bag3DRenderer.init();
 
           console.log('3D 受气包渲染器初始化成功');
+
+          // 3D 渲染器初始化完成后，再初始化包库
+          that.initBagLibrary();
         }
       });
   },

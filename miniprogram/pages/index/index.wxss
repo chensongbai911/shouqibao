@@ -3701,6 +3701,23 @@ page {
   display: block;
 }
 
+.bag-preview-icon {
+  font-size: 80rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8rpx);
+  }
+}
+
 /* 选中勾选标记 */
 .bag-selected-badge {
   position: absolute;
