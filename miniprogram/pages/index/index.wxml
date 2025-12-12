@@ -146,9 +146,15 @@
 
     <!-- 底部悬浮Dock栏 - 毛玻璃效果 -->
     <view class="floating-dock">
+      <view class="dock-item" bindtap="openBagLibrary">
+        <view class="dock-icon-wrap">
+          <text class="dock-icon">🎒</text>
+        </view>
+        <text class="dock-label">包库</text>
+      </view>
       <view class="dock-item" bindtap="openWeaponPanel">
         <view class="dock-icon-wrap">
-          <text class="dock-icon">{{currentWeapon.icon}}</text>
+          <text class="dock-icon">👊</text>
         </view>
         <text class="dock-label">武器</text>
       </view>
@@ -158,11 +164,11 @@
         </view>
         <text class="dock-label">成就</text>
       </view>
-      <view class="dock-item" bindtap="chooseCustomFace">
+      <view class="dock-item" bindtap="openShop">
         <view class="dock-icon-wrap">
-          <text class="dock-icon">📷</text>
+          <text class="dock-icon">🛍️</text>
         </view>
-        <text class="dock-label">换脸</text>
+        <text class="dock-label">商店</text>
       </view>
       <view class="dock-item" bindtap="openSettingsMenu">
         <view class="dock-icon-wrap">
@@ -170,7 +176,7 @@
         </view>
         <text class="dock-label">设置</text>
       </view>
-      <view class="dock-item" bindtap="resetScore">
+      <view class="dock-item" bindtap="openReset">
         <view class="dock-icon-wrap">
           <text class="dock-icon">🔄</text>
         </view>
@@ -539,5 +545,60 @@
     <view class="share-close" bindtap="closeShareCard">
       <text>✕</text>
     </view>
+  </view>
+
+  <!-- 包库面板 -->
+  <view class="bag-library-mask {{showBagLibrary ? 'show' : ''}}" bindtap="closeBagLibrary"></view>
+  <view class="bag-library-panel {{showBagLibrary ? 'show' : ''}}">
+    <!-- 面板头部 -->
+    <view class="bag-lib-header">
+      <view class="bag-lib-drag-indicator"></view>
+      <text class="bag-lib-title">🎒 包库</text>
+      <text class="bag-lib-subtitle">选择你喜欢的包样式</text>
+      <view class="bag-lib-close" bindtap="closeBagLibrary">✕</view>
+    </view>
+
+    <!-- 包模型网格 -->
+    <scroll-view class="bag-lib-scroll" scroll-y="true" enhanced="true" show-scrollbar="false">
+      <view class="bag-lib-grid">
+        <view
+          wx:for="{{bagModelList}}"
+          wx:key="id"
+          class="bag-lib-item {{currentBagModelId === item.id ? 'selected' : ''}}"
+          bindtap="selectBagModel"
+          data-id="{{item.id}}">
+          <!-- 包的3D预览（缩小版Canvas） -->
+          <view class="bag-preview-container">
+            <canvas
+              type="webgl"
+              class="bag-preview-canvas"
+              id="bag-preview-{{item.id}}"
+              canvas-id="bag-preview-{{item.id}}"
+              disable-scroll="true"
+            ></canvas>
+            <!-- 选中勾选标记 -->
+            <view wx:if="{{currentBagModelId === item.id}}" class="bag-selected-badge">
+              <text class="badge-icon">✓</text>
+            </view>
+          </view>
+
+          <!-- 包的信息 -->
+          <view class="bag-lib-info">
+            <text class="bag-lib-name">{{item.name}}</text>
+            <text class="bag-lib-rarity rarity-{{item.rarity}}">{{item.rarity}}</text>
+            <text class="bag-lib-desc">{{item.description}}</text>
+          </view>
+
+          <!-- 稀有度标签 -->
+          <view class="bag-rarity-label rarity-{{item.rarity}}">
+            <text wx:if="{{item.rarity === 'common'}}">普通</text>
+            <text wx:if="{{item.rarity === 'uncommon'}}">优秀</text>
+            <text wx:if="{{item.rarity === 'rare'}}">稀有</text>
+            <text wx:if="{{item.rarity === 'epic'}}">史诗</text>
+            <text wx:if="{{item.rarity === 'legendary'}}">传说</text>
+          </view>
+        </view>
+      </view>
+    </scroll-view>
   </view>
 </view>

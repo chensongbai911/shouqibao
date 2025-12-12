@@ -3,6 +3,9 @@ const AudioPool = require('../../utils/audio_pool.js');
 const Bag3DRenderer = require('../../utils/bag_3d.js');
 const ParticlePool = require('../../utils/particle_pool.js');
 const WeaponEffectSystem = require('../../utils/weapon_effect_system.js');
+const cloudService = require('../../utils/cloud_service.js');
+const syncManager = require('../../utils/sync_manager.js');
+const achievementSystem = require('../../utils/achievement_system.js');
 
 Page({
   data: {
@@ -183,7 +186,12 @@ Page({
     tauntText: '',
 
     // 连击倍增相关
-    comboDamageBoost: 1.0  // 当前连击伤害倍增系数
+    comboDamageBoost: 1.0,  // 当前连击伤害倍增系数
+
+    // 包库系统
+    showBagLibrary: false,      // 显示包库面板
+    bagModelList: [],           // 包模型列表
+    currentBagModelId: 'classical' // 当前选中的包模型
   },
 
   audioPool: null,
@@ -204,7 +212,7 @@ Page({
   /**
    * 页面加载
    */
-  onLoad () {
+  async onLoad () {
     console.log('首页加载');
 
     // 获取状态栏高度（用于自定义导航栏）
@@ -225,8 +233,21 @@ Page({
     // 初始化 3D 渲染器
     this.init3DRenderer();
 
-    // 加载存储的数据
+    // 初始化成就系统
+    await achievementSystem.init();
+    this.achievementSystem = achievementSystem;
+
+    // ===== 云服务集成 =====
+    // 首先尝试从云端加载用户数据
+    const cloudUserData = await this.loadCloudGameData();
+
+    // 加载本地数据 (作为备份)
     this.loadGameData();
+
+    // 如果从云端加载成功，合并数据
+    if (cloudUserData) {
+      this.mergeCloudData(cloudUserData);
+    }
 
     // 初始化UI模式
     this.initUIMode();
@@ -234,8 +255,48 @@ Page({
     // 初始化背景音乐
     this.initBGM();
 
+    // 初始化包库
+    this.initBagLibrary();
+
     // 启动空闲计时器
     this.startIdleTimer();
+  },
+
+  /**
+   * 从云端加载游戏数据
+   * @private
+   * @returns {Promise<Object|null>}
+   */
+  async loadCloudGameData () {
+    try {
+      if (!cloudService.isReady()) {
+        console.warn('云服务未就绪，使用本地数据');
+        return null;
+      }
+
+      const userData = await cloudService.loadUserData();
+      if (userData) {
+        console.log('✅ 云端数据加载成功');
+        return userData;
+      }
+    } catch (error) {
+      console.warn('从云端加载数据失败:', error);
+    }
+    return null;
+  },
+
+  /**
+   * 合并云端数据与本地数据
+   * @private
+   * @param {Object} cloudData - 云端数据
+   */
+  mergeCloudData (cloudData) {
+    // 优先使用云端数据，因为更新更新
+    if (cloudData.totalScore && cloudData.totalScore > this.data.totalScore) {
+      this.setData({
+        totalScore: cloudData.totalScore
+      });
+    }
   },
 
   /**
@@ -427,6 +488,24 @@ Page({
 
       wx.setStorageSync('totalScore', newScore);
       wx.setStorageSync(this.getTodayKey(), newTodayScore);
+
+      // ===== 云端数据同步 =====
+      syncManager.saveScore(newScore).catch(err => {
+        console.warn('分数同步失败:', err);
+      });
+
+      // ===== 成就检查 =====
+      const gameData = {
+        totalScore: newScore,
+        maxCombo: this.data.comboCount,
+        lastDamage: actualDamage
+      };
+
+      this.achievementSystem.updateStat('tapCount', 1);
+      this.achievementSystem.updateStat('maxDamage', actualDamage);
+      this.achievementSystem.checkAchievements(gameData).catch(err => {
+        console.warn('成就检查失败:', err);
+      });
     }, 150);
 
     // 8. 检查武器解锁
@@ -1020,6 +1099,34 @@ Page({
   },
 
   /**
+   * 打开商店
+   */
+  openShop () {
+    wx.showToast({
+      title: '商店敬请期待',
+      icon: 'none',
+      duration: 2000
+    });
+  },
+
+  /**
+   * 打开重置确认
+   */
+  openReset () {
+    wx.showModal({
+      title: '确认重置',
+      content: '确定要重置分数吗？此操作不可撤销。',
+      confirmText: '重置',
+      cancelText: '取消',
+      success: (res) => {
+        if (res.confirm) {
+          this.resetScore();
+        }
+      }
+    });
+  },
+
+  /**
    * 关闭成就面板
    */
   closeAchievementPanel () {
@@ -1289,6 +1396,82 @@ Page({
       title: '已恢复默认',
       icon: 'success'
     });
+  },
+
+  /**
+   * ========== 包库系统 ==========
+   */
+
+  /**
+   * 初始化包库
+   */
+  initBagLibrary () {
+    if (!this.bag3DRenderer) return;
+
+    // 获取包模型列表
+    const bagModelList = this.bag3DRenderer.getBagModelList();
+    this.setData({
+      bagModelList,
+      currentBagModelId: this.bag3DRenderer.currentBagModelId
+    });
+
+    console.log('包库已初始化，可用模型:', bagModelList.length);
+  },
+
+  /**
+   * 打开包库面板
+   */
+  openBagLibrary () {
+    this.setData({ showBagLibrary: true });
+    wx.hapticFeedback({ type: 'light' });
+  },
+
+  /**
+   * 关闭包库面板
+   */
+  closeBagLibrary () {
+    this.setData({ showBagLibrary: false });
+  },
+
+  /**
+   * 选择包模型
+   */
+  selectBagModel (e) {
+    const modelId = e.currentTarget.dataset.id;
+
+    if (!this.bag3DRenderer) {
+      wx.showToast({
+        title: '3D渲染器未就绪',
+        icon: 'none'
+      });
+      return;
+    }
+
+    // 切换包模型
+    const success = this.bag3DRenderer.changeBagModel(modelId);
+    if (success) {
+      this.setData({ currentBagModelId: modelId });
+
+      // 播放反馈音效
+      this.audioPool?.play('hit1');
+
+      // 振动反馈
+      wx.hapticFeedback({ type: 'medium' });
+
+      wx.showToast({
+        title: '成功切换包款',
+        icon: 'success',
+        duration: 1500
+      });
+
+      // 保存选择
+      this.saveGameData();
+    } else {
+      wx.showToast({
+        title: '切换失败',
+        icon: 'none'
+      });
+    }
   },
 
   /**

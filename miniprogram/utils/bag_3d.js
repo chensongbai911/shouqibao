@@ -3,6 +3,7 @@
  */
 
 const { createScopedThreejs } = require('threejs-miniprogram');
+const { BAG_MODELS } = require('./bag_models.js');
 
 const DEFAULT_EXPRESSION = 'normal';
 const STOP_EPSILON = 0.01;
@@ -130,6 +131,10 @@ class Bag3DRenderer {
     this.eyeHighlightRight = null;
     this.mouthGroup = null;
     this.mouthTube = null;
+
+    // 包模型系统
+    this.currentBagModelId = 'classical'; // 默认包模型
+    this.bagModelMesh = null; // 当前包的Three.js mesh
 
     this.squashAmount = 0;
     this.squashTarget = 0;
@@ -287,25 +292,106 @@ class Bag3DRenderer {
     this.bagMesh = new THREE.Group();
     this.scene.add(this.bagMesh);
 
-    this.body = new THREE.Mesh(geometries.body, materials.body);
-    this.body.castShadow = true;
-    this.body.receiveShadow = true;
-    this.bagMesh.add(this.body);
-
-    BAG_LAYOUT.spots.forEach(({ position, radius }) => {
-      const spot = new THREE.Mesh(this.getSpotGeometry(radius), materials.spot);
-      spot.position.set(position[0], position[1], position[2]);
-      spot.lookAt(0, 0, 0);
-      spot.scale.set(1.2, 1.2, 0.22);
-      spot.translateZ(-0.12);
-      this.bagMesh.add(spot);
-    });
+    // 创建选定的包模型
+    this.createBagModel(THREE, materials);
 
     this.createEyes(materials.feature, materials.highlight, geometries.eye, geometries.highlight);
     this.createBrows(materials.feature, geometries.brow);
     this.createMouth(materials.mouth);
     this.createCheeks(materials.cheek, geometries.cheek);
     this.createArms(materials.body, geometries.limb, geometries.hand);
+  }
+
+  /**
+   * 根据currentBagModelId创建对应的包模型
+   */
+  createBagModel (THREE, materials) {
+    const bagModelDef = BAG_MODELS[this.currentBagModelId];
+
+    if (!bagModelDef) {
+      console.warn(`包模型 ${this.currentBagModelId} 不存在，使用默认模型`);
+      this.currentBagModelId = 'classical';
+      return this.createBagModel(THREE, materials);
+    }
+
+    // 调用对应的创建函数
+    const modelGroup = bagModelDef.creator(THREE, {
+      bagBody: materials.body,
+      bagGlass: materials.body,
+      bagAccent: materials.spot
+    });
+
+    // 缩放模型适应现有的表情系统
+    modelGroup.scale.set(0.6, 0.6, 0.6);
+
+    this.bagMesh.add(modelGroup);
+    this.bagModelMesh = modelGroup;
+    this.body = modelGroup.bodyMesh; // 保持对body的引用用于表情系统
+
+    // 原有的斑点系统（仅对经典模型保留）
+    if (this.currentBagModelId === 'classical') {
+      BAG_LAYOUT.spots.forEach(({ position, radius }) => {
+        const spot = new THREE.Mesh(this.getSpotGeometry(radius), materials.spot);
+        spot.position.set(position[0], position[1], position[2]);
+        spot.lookAt(0, 0, 0);
+        spot.scale.set(1.2, 1.2, 0.22);
+        spot.translateZ(-0.12);
+        this.bagMesh.add(spot);
+      });
+    }
+  }
+
+  /**
+   * 切换包模型
+   */
+  changeBagModel (modelId) {
+    if (!BAG_MODELS[modelId]) {
+      console.error(`包模型 ${modelId} 不存在`);
+      return false;
+    }
+
+    this.currentBagModelId = modelId;
+
+    // 移除旧模型
+    if (this.bagModelMesh) {
+      this.bagMesh.remove(this.bagModelMesh);
+      this.bagModelMesh.traverse((child) => {
+        if (child.geometry) child.geometry.dispose();
+        if (child.material) {
+          if (Array.isArray(child.material)) {
+            child.material.forEach(mat => mat.dispose());
+          } else {
+            child.material.dispose();
+          }
+        }
+      });
+    }
+
+    // 清理旧的身体引用
+    this.body = null;
+
+    // 创建新模型
+    const THREE = this.THREE;
+    const { materials } = this.resources;
+    this.createBagModel(THREE, materials);
+
+    // 应用当前表情
+    this.changeExpression(this.currentExpression);
+
+    this.requestRender();
+    return true;
+  }
+
+  /**
+   * 获取所有可用的包模型列表
+   */
+  getBagModelList () {
+    return Object.values(BAG_MODELS).map(model => ({
+      id: model.id,
+      name: model.name,
+      description: model.description,
+      rarity: model.rarity
+    }));
   }
 
   setupLights () {
@@ -670,6 +756,7 @@ class Bag3DRenderer {
     this.renderer = null;
     this.THREE = null;
     this.bagMesh = null;
+    this.bagModelMesh = null;
     this.body = null;
     this.eyeLeft = null;
     this.eyeRight = null;
