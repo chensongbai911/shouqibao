@@ -37,42 +37,48 @@ Page({
         rarity: 'common', attackStars: 1, speedStars: 3, critStars: 1,
         description: '最基础的武器，但永远可靠',
         color: '#9E9E9E',
-        effect: { type: 'none' }
+        effect: { type: 'none' },
+        audioPath: '/audio/slap.mp3'
       },
       {
         id: 'phone', name: '愤怒手机', damage: 15, icon: '📱', unlockScore: 50,
         rarity: 'common', attackStars: 1, speedStars: 3, critStars: 2,
         description: '摔了无数次依然坚挺',
         color: '#2196F3',
-        effect: { type: 'none' }
+        effect: { type: 'none' },
+        audioPath: '/audio/phone.mp3'
       },
       {
         id: 'keyboard', name: '机械键盘', damage: 20, icon: '⌨️', unlockScore: 100,
         rarity: 'uncommon', attackStars: 2, speedStars: 2, critStars: 2,
         description: '程序员的愤怒之源',
         color: '#4CAF50',
-        effect: { type: 'multi_hit', proc: 0.2, count: 2, damageScale: 0.5 }
+        effect: { type: 'multi_hit', proc: 0.2, count: 2, damageScale: 0.5 },
+        audioPath: '/audio/keyboard.mp3'
       },
       {
         id: 'chair', name: '人体工学椅', damage: 30, icon: '🪑', unlockScore: 300,
         rarity: 'uncommon', attackStars: 3, speedStars: 1, critStars: 2,
         description: '久坐族的复仇武器',
         color: '#4CAF50',
-        effect: { type: 'crit_boost', proc: 0.3, scale: 0.5 }
+        effect: { type: 'crit_boost', proc: 0.3, scale: 0.5 },
+        audioPath: '/audio/chair.mp3'
       },
       {
         id: 'hammer', name: '正义之锤', damage: 50, icon: '🔨', unlockScore: 500,
         rarity: 'rare', attackStars: 4, speedStars: 1, critStars: 3,
         description: '一锤定音，气消云散',
         color: '#9C27B0',
-        effect: { type: 'aoe_damage', proc: 0.15, radius: 200, scale: 1.5 }
+        effect: { type: 'aoe_damage', proc: 0.15, radius: 200, scale: 1.5 },
+        audioPath: '/audio/hammer.mp3'
       },
       {
         id: 'baseball', name: '全垒打棒', damage: 100, icon: '⚾', unlockScore: 1000,
         rarity: 'epic', attackStars: 5, speedStars: 2, critStars: 4,
         description: '送你一记本垒打！',
         color: '#FF9800',
-        effect: { type: 'combo_accumulate', maxScale: 2.5 }
+        effect: { type: 'combo_accumulate', maxScale: 2.5 },
+        audioPath: '/audio/baseball.mp3'
       }
     ],
     // 特殊武器（需要成就或分享解锁）- 传说级
@@ -549,33 +555,76 @@ Page({
       clearTimeout(this.expressionTimer);
     }
 
-    let expression = 'hit';
-    let duration = 300;
+    if (!this.bag3DRenderer) return;
+
+    // 计算累计伤害百分比
+    const maxHealth = 10000; // 设定最大血量
+    const damagePercent = Math.min(100, (this.data.totalScore / maxHealth) * 100);
 
     if (isCrit) {
-      expression = 'crit';
-      duration = 500;
-    }
+      // 暴击时显示暴击表情
+      this.bag3DRenderer.changeExpression('crit');
 
-    // 累计伤害超过1000时，有20%概率昏迷
-    if (this.data.totalScore > 1000 && Math.random() < 0.2) {
-      expression = 'dizzy';
-      duration = 1000;
-    }
-
-    // 更新 3D 表情
-    if (this.bag3DRenderer) {
-      this.bag3DRenderer.changeExpression(expression);
-    }
-
-    this.setData({ bagExpression: expression });
-
-    this.expressionTimer = setTimeout(() => {
-      if (this.bag3DRenderer) {
-        this.bag3DRenderer.changeExpression('normal');
+      // 添加明显的青肿斑点
+      const hitPosition = this.get3DHitPosition();
+      if (hitPosition) {
+        this.bag3DRenderer.addBruise(hitPosition, 0.8);
       }
-      this.setData({ bagExpression: 'normal' });
-    }, duration);
+
+      // 如果接近濒死，添加星星效果
+      if (damagePercent >= 80) {
+        this.bag3DRenderer.addStarsEffect();
+      }
+
+      // 500ms后恢复到正常受伤状态
+      this.expressionTimer = setTimeout(() => {
+        this.bag3DRenderer.updateExpressionByDamage(damagePercent);
+        this.setData({ bagExpression: this.getExpressionName(damagePercent) });
+      }, 500);
+    } else {
+      // 普通攻击 - 根据累计伤害显示对应表情
+      this.bag3DRenderer.updateExpressionByDamage(damagePercent);
+
+      // 30%概率添加轻微青肿
+      if (Math.random() > 0.7) {
+        const hitPosition = this.get3DHitPosition();
+        if (hitPosition) {
+          this.bag3DRenderer.addBruise(hitPosition, 0.3 + Math.random() * 0.3);
+        }
+      }
+    }
+
+    this.setData({ bagExpression: this.getExpressionName(damagePercent) });
+  },
+
+  /**
+   * 根据伤害百分比获取表情名称
+   */
+  getExpressionName (damagePercent) {
+    if (damagePercent >= 80) return 'dying';
+    if (damagePercent >= 60) return 'hurt_severe';
+    if (damagePercent >= 40) return 'hit_heavy';
+    if (damagePercent >= 20) return 'hit_medium';
+    if (damagePercent >= 5) return 'hit_light';
+    return 'normal';
+  },
+
+  /**
+   * 获取3D击打位置（随机位置）
+   */
+  get3DHitPosition () {
+    if (!this.bag3DRenderer || !this.bag3DRenderer.THREE) return null;
+
+    // 在受气包表面随机生成一个点
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.acos(2 * Math.random() - 1);
+    const radius = 2.0; // 受气包半径
+
+    const x = radius * Math.sin(phi) * Math.cos(theta);
+    const y = radius * Math.sin(phi) * Math.sin(theta);
+    const z = radius * Math.cos(phi);
+
+    return new this.bag3DRenderer.THREE.Vector3(x, y, z);
   },
 
   /**
@@ -602,15 +651,8 @@ Page({
    * 播放受击音效
    */
   playHitSound () {
-    const weaponId = this.data.currentWeapon.id;
-    const soundMap = {
-      'hand': '/audio/slap.mp3',
-      'keyboard': '/audio/slap.mp3',
-      'hammer': '/audio/slap.mp3',
-      'baseball': '/audio/slap.mp3'
-    };
-
-    const soundPath = soundMap[weaponId] || '/audio/slap.mp3';
+    const currentWeapon = this.data.currentWeapon;
+    const soundPath = currentWeapon.audioPath || '/audio/slap.mp3';
 
     if (this.audioPool) {
       this.audioPool.play(soundPath);
@@ -622,6 +664,19 @@ Page({
   },
 
   /**
+   * 播放武器切换音效
+   */
+  playWeaponSwitchSound () {
+    const switchSoundPath = '/audio/switch.mp3';
+
+    if (this.audioPool) {
+      this.audioPool.play(switchSoundPath);
+    } else {
+      const audio = wx.createInnerAudioContext();
+      audio.src = switchSoundPath;
+      audio.play();
+    }
+  },  /**
    * 震动反馈
    */
   vibratePhone (isCrit) {
@@ -1003,6 +1058,12 @@ Page({
       }
     }
 
+    // 播放切换音效
+    this.playWeaponSwitchSound();
+
+    // 轻微震动反馈
+    wx.vibrateShort({ type: 'light' });
+
     this.setData({
       currentWeapon: weapon,
       showWeaponPanel: false
@@ -1099,6 +1160,12 @@ Page({
           wx.setStorageSync('totalScore', 0);
           wx.setStorageSync(this.getTodayKey(), 0);
           wx.setStorageSync('currentWeapon', 'hand');
+
+          // 清除3D受气包的受伤效果
+          if (this.bag3DRenderer) {
+            this.bag3DRenderer.clearDamageEffects();
+          }
+
           wx.showToast({
             title: '已重置',
             icon: 'success'

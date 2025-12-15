@@ -39,11 +39,79 @@ const MOUTH_CONFIG = Object.freeze({
   amplitude: 0.1
 });
 
+// 渐进式受伤表情预设 - 基于累计伤害的表情变化
 const EXPRESSION_PRESETS = Object.freeze({
-  normal: { eyeScale: { x: 1, y: 1 }, eyeRotation: 0, mouthCurve: 0.3 },
-  hit: { eyeScale: { x: 1.5, y: 0.2 }, eyeRotation: 0, mouthCurve: -0.5 },
-  crit: { eyeScale: { x: 1.2, y: 0.1 }, eyeRotation: Math.PI / 4, mouthCurve: -0.8 },
-  dizzy: { eyeScale: { x: 1, y: 1 }, eyeRotation: Math.PI / 6, mouthCurve: -0.3 }
+  // 正常状态 - 开心自信
+  normal: {
+    eyeScale: { x: 1, y: 1 },
+    eyeRotation: 0,
+    mouthCurve: 0.3,
+    cheekPuff: 0,
+    eyeBrowAngle: 0
+  },
+
+  // 轻微受击 - 轻伤 (0-20% 血量损失)
+  hit_light: {
+    eyeScale: { x: 1.3, y: 0.4 },
+    eyeRotation: 0,
+    mouthCurve: 0,
+    cheekPuff: 0.1,
+    eyeBrowAngle: -0.1
+  },
+
+  // 中度受击 - 开始痛苦 (20-40% 血量损失)
+  hit_medium: {
+    eyeScale: { x: 1.5, y: 0.2 },
+    eyeRotation: 0.1,
+    mouthCurve: -0.3,
+    cheekPuff: 0.3,
+    eyeBrowAngle: -0.2
+  },
+
+  // 重度受击 - 很痛苦 (40-60% 血量损失)
+  hit_heavy: {
+    eyeScale: { x: 1.7, y: 0.15 },
+    eyeRotation: 0.2,
+    mouthCurve: -0.6,
+    cheekPuff: 0.5,
+    eyeBrowAngle: -0.3
+  },
+
+  // 严重受伤 - 快要哭了 (60-80% 血量损失)
+  hurt_severe: {
+    eyeScale: { x: 0.8, y: 1.4 },
+    eyeRotation: 0.3,
+    mouthCurve: -0.8,
+    cheekPuff: 0.7,
+    eyeBrowAngle: -0.4
+  },
+
+  // 濒死状态 - 眼冒金星 (80-100% 血量损失)
+  dying: {
+    eyeScale: { x: 0.5, y: 0.5 },
+    eyeRotation: Math.PI / 3,
+    mouthCurve: -1.0,
+    cheekPuff: 1.0,
+    eyeBrowAngle: -0.5
+  },
+
+  // 暴击特效 - 瞬间重击
+  crit: {
+    eyeScale: { x: 2.0, y: 0.1 },
+    eyeRotation: Math.PI / 4,
+    mouthCurve: -0.9,
+    cheekPuff: 0.8,
+    eyeBrowAngle: -0.6
+  },
+
+  // 眩晕状态 - 转圈圈
+  dizzy: {
+    eyeScale: { x: 1, y: 1 },
+    eyeRotation: Math.PI / 6,
+    mouthCurve: -0.3,
+    cheekPuff: 0.4,
+    eyeBrowAngle: -0.2
+  }
 });
 
 const clayNoiseCache = new WeakMap();
@@ -150,6 +218,14 @@ class Bag3DRenderer {
     this.mouthCurve = 0;
     this.mouthCurveTarget = 0;
     this.mouthDirty = false;
+
+    // 受伤系统
+    this.damageLevel = 0; // 0-100 的累计受伤程度
+    this.bruises = []; // 青肿斑点数组
+    this.swelling = 0; // 肿胀程度
+    this.swellingTarget = 0;
+    this.tears = []; // 眼泪粒子
+    this.stars = []; // 眼冒金星效果
 
     this.width = 0;
     this.height = 0;
@@ -511,6 +587,246 @@ class Bag3DRenderer {
     this.applyExpressionPreset(preset);
   }
 
+  /**
+   * 根据累计伤害自动选择表情
+   * @param {number} damagePercent - 伤害百分比 (0-100)
+   */
+  updateExpressionByDamage (damagePercent) {
+    let expression = 'normal';
+
+    if (damagePercent >= 80) {
+      expression = 'dying'; // 濒死
+    } else if (damagePercent >= 60) {
+      expression = 'hurt_severe'; // 严重受伤
+    } else if (damagePercent >= 40) {
+      expression = 'hit_heavy'; // 重度受击
+    } else if (damagePercent >= 20) {
+      expression = 'hit_medium'; // 中度受击
+    } else if (damagePercent >= 5) {
+      expression = 'hit_light'; // 轻微受击
+    }
+
+    this.damageLevel = damagePercent;
+    this.changeExpression(expression);
+
+    // 更新肿胀程度
+    this.swellingTarget = damagePercent / 100;
+  }
+
+  /**
+   * 添加青肿斑点
+   * @param {Object} position - 击打位置 {x, y, z}
+   * @param {number} intensity - 强度 (0-1)
+   */
+  addBruise (position, intensity = 0.5) {
+    if (!this.THREE || !this.bagMesh) return;
+
+    const bruise = {
+      position: position,
+      intensity: intensity,
+      size: 0.2 + intensity * 0.3,
+      color: new this.THREE.Color().setHSL(0.75, 0.6, 0.2 + intensity * 0.3),
+      age: 0,
+      maxAge: 3000 + Math.random() * 2000, // 3-5秒消失
+      mesh: null
+    };
+
+    // 创建青肿斑点的3D网格
+    const bruiseGeometry = new this.THREE.SphereGeometry(bruise.size, 16, 16);
+    const bruiseMaterial = new this.THREE.MeshBasicMaterial({
+      color: bruise.color,
+      transparent: true,
+      opacity: 0.6 * intensity,
+      depthWrite: false
+    });
+
+    bruise.mesh = new this.THREE.Mesh(bruiseGeometry, bruiseMaterial);
+    bruise.mesh.position.copy(position);
+
+    // 稍微浮出表面
+    const normal = position.clone().normalize();
+    bruise.mesh.position.addScaledVector(normal, 0.05);
+
+    this.bagMesh.add(bruise.mesh);
+    this.bruises.push(bruise);
+
+    // 限制最多20个青肿
+    if (this.bruises.length > 20) {
+      const oldest = this.bruises.shift();
+      if (oldest.mesh) {
+        this.bagMesh.remove(oldest.mesh);
+        oldest.mesh.geometry.dispose();
+        oldest.mesh.material.dispose();
+      }
+    }
+
+    this.requestRender();
+  }
+
+  /**
+   * 更新青肿斑点（渐变消失）
+   * @param {number} deltaTime - 时间增量
+   */
+  updateBruises (deltaTime) {
+    if (!this.bruises.length) return;
+
+    let needsUpdate = false;
+
+    this.bruises = this.bruises.filter(bruise => {
+      bruise.age += deltaTime;
+
+      if (bruise.age >= bruise.maxAge) {
+        // 移除过期的青肿
+        if (bruise.mesh) {
+          this.bagMesh.remove(bruise.mesh);
+          bruise.mesh.geometry.dispose();
+          bruise.mesh.material.dispose();
+        }
+        return false;
+      }
+
+      // 渐变透明
+      const fadeProgress = bruise.age / bruise.maxAge;
+      if (bruise.mesh && bruise.mesh.material) {
+        bruise.mesh.material.opacity = (1 - fadeProgress) * 0.6 * bruise.intensity;
+        needsUpdate = true;
+      }
+
+      return true;
+    });
+
+    if (needsUpdate) {
+      this.requestRender();
+    }
+  }
+
+  /**
+   * 添加眼冒金星效果（濒死时）
+   */
+  addStarsEffect () {
+    if (!this.THREE || !this.bagMesh) return;
+
+    // 清除旧的星星
+    this.stars.forEach(star => {
+      if (star.mesh) {
+        this.bagMesh.remove(star.mesh);
+        star.mesh.geometry.dispose();
+        star.mesh.material.dispose();
+      }
+    });
+    this.stars = [];
+
+    // 创建3-5颗旋转的星星
+    const starCount = 3 + Math.floor(Math.random() * 3);
+
+    for (let i = 0; i < starCount; i++) {
+      const angle = (i / starCount) * Math.PI * 2;
+      const radius = 2.5;
+
+      // 创建简单的星星形状
+      const starGeometry = this.createStarGeometry(0.3);
+      const starMaterial = new this.THREE.MeshBasicMaterial({
+        color: 0xffff00,
+        transparent: true,
+        opacity: 0.9
+      });
+
+      const starMesh = new this.THREE.Mesh(starGeometry, starMaterial);
+      starMesh.position.set(
+        Math.cos(angle) * radius,
+        2 + Math.sin(angle * 2) * 0.5,
+        Math.sin(angle) * radius
+      );
+
+      this.bagMesh.add(starMesh);
+
+      this.stars.push({
+        mesh: starMesh,
+        angle: angle,
+        radius: radius,
+        speed: 0.02 + Math.random() * 0.01
+      });
+    }
+
+    this.requestRender();
+  }
+
+  /**
+   * 创建星星几何体
+   */
+  createStarGeometry (size) {
+    const shape = new this.THREE.Shape();
+    const points = 5;
+    const outerRadius = size;
+    const innerRadius = size * 0.4;
+
+    for (let i = 0; i < points * 2; i++) {
+      const radius = i % 2 === 0 ? outerRadius : innerRadius;
+      const angle = (i / (points * 2)) * Math.PI * 2 - Math.PI / 2;
+      const x = Math.cos(angle) * radius;
+      const y = Math.sin(angle) * radius;
+
+      if (i === 0) {
+        shape.moveTo(x, y);
+      } else {
+        shape.lineTo(x, y);
+      }
+    }
+    shape.closePath();
+
+    const geometry = new this.THREE.ShapeGeometry(shape);
+    return geometry;
+  }
+
+  /**
+   * 更新星星旋转动画
+   */
+  updateStars () {
+    if (!this.stars.length) return;
+
+    this.stars.forEach(star => {
+      star.angle += star.speed;
+      star.mesh.position.x = Math.cos(star.angle) * star.radius;
+      star.mesh.position.z = Math.sin(star.angle) * star.radius;
+      star.mesh.rotation.z += 0.05;
+    });
+
+    this.requestRender();
+  }
+
+  /**
+   * 清除所有受伤效果
+   */
+  clearDamageEffects () {
+    // 清除青肿
+    this.bruises.forEach(bruise => {
+      if (bruise.mesh) {
+        this.bagMesh.remove(bruise.mesh);
+        bruise.mesh.geometry.dispose();
+        bruise.mesh.material.dispose();
+      }
+    });
+    this.bruises = [];
+
+    // 清除星星
+    this.stars.forEach(star => {
+      if (star.mesh) {
+        this.bagMesh.remove(star.mesh);
+        star.mesh.geometry.dispose();
+        star.mesh.material.dispose();
+      }
+    });
+    this.stars = [];
+
+    // 重置状态
+    this.damageLevel = 0;
+    this.swellingTarget = 0;
+    this.swelling = 0;
+
+    this.changeExpression('normal');
+    this.requestRender();
+  }
+
   applyExpressionPreset (preset) {
     this.eyeTarget = { x: preset.eyeScale.x, y: preset.eyeScale.y };
     this.eyeRotationTarget = preset.eyeRotation;
@@ -617,6 +933,18 @@ class Bag3DRenderer {
 
   stepAnimation () {
     let active = false;
+
+    // 更新受伤效果
+    if (this.bruises.length > 0) {
+      this.updateBruises(16); // 假设16ms每帧
+      active = true;
+    }
+
+    // 更新星星旋转
+    if (this.stars.length > 0) {
+      this.updateStars();
+      active = true;
+    }
 
     if (Math.abs(this.squashAmount - this.squashTarget) > STOP_EPSILON) {
       this.squashAmount += (this.squashTarget - this.squashAmount) * this.squashSpeed;
