@@ -50,29 +50,58 @@ class CloudService {
    * @returns {Promise<void>}
    */
   async getUserId () {
-    try {
-      return new Promise((resolve, reject) => {
+    const cachedUserId = wx.getStorageSync('userId');
+
+    return new Promise((resolve, reject) => {
+      try {
         wx.cloud.callFunction({
           name: 'login',
           data: {},
           success: res => {
-            this.userId = res.result.openid;
-            wx.setStorageSync('userId', this.userId);
-            console.log('用户ID获取成功');
-            resolve();
+            if (res && res.result && res.result.openid) {
+              this.userId = res.result.openid;
+              wx.setStorageSync('userId', this.userId);
+              console.log('用户ID获取成功');
+              resolve(this.userId);
+            } else {
+              console.warn('云函数返回数据异常，使用备用用户ID');
+              const fallbackId = this._useFallbackUserId('login function returned empty result', cachedUserId);
+              resolve(fallbackId);
+            }
           },
           fail: err => {
             console.error('获取用户ID失败:', err);
-            reject(err);
+            const fallbackId = this._useFallbackUserId(err, cachedUserId);
+            resolve(fallbackId);
           }
         });
-      });
-    } catch (error) {
-      // 如果云函数不可用，使用本地缓存
-      this.userId = wx.getStorageSync('userId') || 'anonymous_' + Date.now();
-      wx.setStorageSync('userId', this.userId);
-      console.warn('使用备用用户ID:', this.userId);
+      } catch (error) {
+        console.error('调用云函数异常:', error);
+        const fallbackId = this._useFallbackUserId(error, cachedUserId);
+        resolve(fallbackId);
+      }
+    });
+  }
+
+  /**
+   * 使用备用用户ID
+   * @private
+   * @param {Error|string} reason
+   * @param {string|null} cachedUserId
+   * @returns {string}
+   */
+  _useFallbackUserId (reason, cachedUserId) {
+    if (cachedUserId) {
+      this.userId = cachedUserId;
+      console.warn('使用缓存用户ID:', cachedUserId, '原因:', reason);
+      return cachedUserId;
     }
+
+    const fallbackId = 'anonymous_' + Date.now();
+    this.userId = fallbackId;
+    wx.setStorageSync('userId', fallbackId);
+    console.warn('使用新生成的备用用户ID:', fallbackId, '原因:', reason);
+    return fallbackId;
   }
 
   /**

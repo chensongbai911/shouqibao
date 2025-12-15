@@ -201,7 +201,7 @@ class Bag3DRenderer {
     this.mouthTube = null;
 
     // 包模型系统
-    this.currentBagModelId = 'classical'; // 默认包模型
+    this.currentBagModelId = 'doraemon'; // 默认包模型
     this.bagModelMesh = null; // 当前包的Three.js mesh
 
     this.squashAmount = 0;
@@ -262,11 +262,11 @@ class Bag3DRenderer {
 
     this.renderer = new THREE.WebGLRenderer({
       canvas: this.canvas,
-      antialias: true,
+      antialias: false, // 关闭抗锯齿以提升性能
       alpha: true
     });
     this.renderer.setSize(this.width, this.height);
-    this.renderer.setPixelRatio(Math.max(1, this.canvas.width / PIXEL_RATIO_DENOMINATOR));
+    this.renderer.setPixelRatio(1); // 强制使用1倍像素比，避免过度渲染
 
     if (typeof this.renderer.physicallyCorrectLights !== 'undefined') {
       this.renderer.physicallyCorrectLights = true;
@@ -371,11 +371,21 @@ class Bag3DRenderer {
     // 创建选定的包模型
     this.createBagModel(THREE, materials);
 
-    this.createEyes(materials.feature, materials.highlight, geometries.eye, geometries.highlight);
-    this.createBrows(materials.feature, geometries.brow);
-    this.createMouth(materials.mouth);
-    this.createCheeks(materials.cheek, geometries.cheek);
-    this.createArms(materials.body, geometries.limb, geometries.hand);
+    if (this.currentBagModelId === 'doraemon') {
+      // 哆啦A梦模型自带五官和四肢
+      const userData = this.bagModelMesh.userData;
+      this.eyeLeft = userData.eyeLeft;
+      this.eyeRight = userData.eyeRight;
+      // 嘴巴暂时使用静态模型
+      this.mouthTube = null;
+      this.mouthGroup = null;
+    } else {
+      this.createEyes(materials.feature, materials.highlight, geometries.eye, geometries.highlight);
+      this.createBrows(materials.feature, geometries.brow);
+      this.createMouth(materials.mouth);
+      this.createCheeks(materials.cheek, geometries.cheek);
+      this.createArms(materials.body, geometries.limb, geometries.hand);
+    }
   }
 
   /**
@@ -386,15 +396,16 @@ class Bag3DRenderer {
 
     if (!bagModelDef) {
       console.warn(`包模型 ${this.currentBagModelId} 不存在，使用默认模型`);
-      this.currentBagModelId = 'classical';
+      this.currentBagModelId = 'doraemon';
       return this.createBagModel(THREE, materials);
     }
 
-    // 调用对应的创建函数
+    // 调用对应的创建函数，传递完整的材质对象
     const modelGroup = bagModelDef.creator(THREE, {
       bagBody: materials.body,
       bagGlass: materials.body,
-      bagAccent: materials.spot
+      bagAccent: materials.spot,
+      bagFeature: materials.feature
     });
 
     // 缩放模型适应现有的表情系统
@@ -403,18 +414,6 @@ class Bag3DRenderer {
     this.bagMesh.add(modelGroup);
     this.bagModelMesh = modelGroup;
     this.body = modelGroup.bodyMesh; // 保持对body的引用用于表情系统
-
-    // 原有的斑点系统（仅对经典模型保留）
-    if (this.currentBagModelId === 'classical') {
-      BAG_LAYOUT.spots.forEach(({ position, radius }) => {
-        const spot = new THREE.Mesh(this.getSpotGeometry(radius), materials.spot);
-        spot.position.set(position[0], position[1], position[2]);
-        spot.lookAt(0, 0, 0);
-        spot.scale.set(1.2, 1.2, 0.22);
-        spot.translateZ(-0.12);
-        this.bagMesh.add(spot);
-      });
-    }
   }
 
   /**
@@ -428,28 +427,49 @@ class Bag3DRenderer {
 
     this.currentBagModelId = modelId;
 
-    // 移除旧模型
-    if (this.bagModelMesh) {
-      this.bagMesh.remove(this.bagModelMesh);
-      this.bagModelMesh.traverse((child) => {
-        if (child.geometry) child.geometry.dispose();
-        if (child.material) {
-          if (Array.isArray(child.material)) {
-            child.material.forEach(mat => mat.dispose());
-          } else {
-            child.material.dispose();
+    // 移除所有子元素
+    const childrenToRemove = [...this.bagMesh.children];
+    childrenToRemove.forEach(child => {
+      this.bagMesh.remove(child);
+      if (child.traverse) {
+        child.traverse((obj) => {
+          if (obj.geometry) obj.geometry.dispose();
+          if (obj.material) {
+            if (Array.isArray(obj.material)) {
+              obj.material.forEach(mat => mat.dispose());
+            } else {
+              obj.material.dispose();
+            }
           }
-        }
-      });
-    }
+        });
+      }
+    });
 
-    // 清理旧的身体引用
+    // 清理旧的引用
+    this.bagModelMesh = null;
     this.body = null;
+    this.eyeLeft = null;
+    this.eyeRight = null;
+    this.mouthGroup = null;
+    this.mouthTube = null;
 
     // 创建新模型
     const THREE = this.THREE;
     const { materials } = this.resources;
     this.createBagModel(THREE, materials);
+
+    if (this.currentBagModelId === 'doraemon') {
+      const userData = this.bagModelMesh.userData;
+      this.eyeLeft = userData.eyeLeft;
+      this.eyeRight = userData.eyeRight;
+    } else {
+      const { geometries } = this.resources;
+      this.createEyes(materials.feature, materials.highlight, geometries.eye, geometries.highlight);
+      this.createBrows(materials.feature, geometries.brow);
+      this.createMouth(materials.mouth);
+      this.createCheeks(materials.cheek, geometries.cheek);
+      this.createArms(materials.body, geometries.limb, geometries.hand);
+    }
 
     // 应用当前表情
     this.changeExpression(this.currentExpression);
@@ -477,8 +497,8 @@ class Bag3DRenderer {
     keyLight.position.set(5, 8, 8);
     keyLight.angle = Math.PI / 4;
     keyLight.penumbra = 0.45;
-    keyLight.castShadow = true;
-    keyLight.shadow.bias = -0.0001;
+    keyLight.castShadow = false; // 关闭阴影
+    // keyLight.shadow.bias = -0.0001;
     this.scene.add(keyLight);
 
     const ambientLight = new THREE.AmbientLight(0xffd1dc, 0.55);

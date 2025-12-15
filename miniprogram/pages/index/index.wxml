@@ -191,6 +191,21 @@
         <text class="settings-icon">{{bgmPlaying ? '🔊' : '🔇'}}</text>
         <text class="settings-text">{{bgmPlaying ? '关闭音效' : '开启音效'}}</text>
       </view>
+      <view class="settings-item volume-item">
+        <view class="volume-header">
+          <text class="settings-icon">🎚️</text>
+          <text class="settings-text">BGM 音量 {{bgmVolumeDisplay}}%</text>
+        </view>
+        <slider
+          class="bgm-volume-slider"
+          min="0"
+          max="100"
+          step="1"
+          value="{{bgmVolumeDisplay}}"
+          bindchanging="onBgmVolumeChanging"
+          bindchange="onBgmVolumeChange"
+        ></slider>
+      </view>
       <view class="settings-item" bindtap="toggleDarkMode">
         <text class="settings-icon">{{darkMode ? '☀️' : '🌙'}}</text>
         <text class="settings-text">{{darkMode ? '浅色模式' : '深色模式'}}</text>

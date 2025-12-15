@@ -159,6 +159,8 @@ Page({
     // UI模式
     darkMode: false,
     bgmPlaying: false,
+    bgmVolume: 0.3,
+    bgmVolumeDisplay: 30,
     showTapHint: true,  // 点击提示
 
     // 受击动画
@@ -197,7 +199,7 @@ Page({
     // 包库系统
     showBagLibrary: false,      // 显示包库面板
     bagModelList: [],           // 包模型列表
-    currentBagModelId: 'classical' // 当前选中的包模型
+    currentBagModelId: 'doraemon' // 当前选中的包模型
   },
 
   audioPool: null,
@@ -336,8 +338,13 @@ Page({
           console.log('3D 受气包渲染器初始化成功');
 
           // 3D 渲染器初始化完成后，恢复之前保存的包模型
-          const savedBagModelId = wx.getStorageSync('currentBagModelId') || 'classical';
-          if (savedBagModelId !== 'classical') {
+          let savedBagModelId = wx.getStorageSync('currentBagModelId');
+          if (!savedBagModelId || savedBagModelId === 'classical') {
+            savedBagModelId = 'doraemon';
+            wx.setStorageSync('currentBagModelId', savedBagModelId);
+          }
+
+          if (savedBagModelId !== 'doraemon') {
             that.bag3DRenderer.changeBagModel(savedBagModelId);
           }
 
@@ -354,7 +361,11 @@ Page({
     const totalScore = wx.getStorageSync('totalScore') || 0;
     const currentWeaponId = wx.getStorageSync('currentWeapon') || 'hand';
     const customFaceUrl = wx.getStorageSync('customFaceUrl') || '';
-    const currentBagModelId = wx.getStorageSync('currentBagModelId') || 'classical';
+    let currentBagModelId = wx.getStorageSync('currentBagModelId');
+    if (!currentBagModelId || currentBagModelId === 'classical') {
+      currentBagModelId = 'doraemon';
+      wx.setStorageSync('currentBagModelId', currentBagModelId);
+    }
 
     // 加载今日伤害
     const todayKey = this.getTodayKey();
@@ -403,21 +414,187 @@ Page({
    * 初始化背景音乐
    */
   initBGM () {
-    this.bgmAudioContext = wx.createInnerAudioContext();
-    this.bgmAudioContext.src = '/audio/bgm.mp3';
-    this.bgmAudioContext.loop = true;
-    this.bgmAudioContext.volume = 0.3;
+    try {
+      this.bgmAudioContext = wx.createInnerAudioContext();
+      this.bgmAudioContext.src = '/audio/bgm.mp3';
+      this.bgmAudioContext.loop = true;
+      this.bgmAudioContext.volume = 0; // 从0开始，用于淡入
+      this.bgmAudioContext.autoplay = false;
 
-    const bgmPlaying = wx.getStorageSync('bgmPlaying') || false;
-    this.setData({ bgmPlaying });
+      // 加载用户偏好
+      const bgmPlaying = wx.getStorageSync('bgmPlaying');
 
-    if (bgmPlaying) {
-      this.bgmAudioContext.play();
+      let storedVolume = wx.getStorageSync('bgmVolume');
+      if (storedVolume === undefined || storedVolume === null || storedVolume === '') {
+        storedVolume = 0.3;
+      }
+      const bgmVolume = Number(storedVolume);
+      const safeVolume = Number.isFinite(bgmVolume) && bgmVolume >= 0 && bgmVolume <= 1 ? bgmVolume : 0.3;
+
+      this.setData({
+        bgmPlaying: bgmPlaying === true, // 默认关闭
+        bgmVolume: safeVolume,
+        bgmVolumeDisplay: Math.round(safeVolume * 100)
+      });
+
+      // 错误处理
+      this.bgmAudioContext.onError((err) => {
+        console.warn('BGM播放失败:', err);
+        this.setData({ bgmPlaying: false });
+        wx.setStorageSync('bgmPlaying', false);
+      });
+
+      // 播放结束事件（虽然是循环，但万一失败可以重试）
+      this.bgmAudioContext.onEnded(() => {
+        if (this.data.bgmPlaying) {
+          this.bgmAudioContext.play();
+        }
+      });
+
+      // 可以播放事件
+      this.bgmAudioContext.onCanplay(() => {
+        console.log('BGM已准备好');
+      });
+
+      // 如果用户之前开启了BGM，则播放
+      if (this.data.bgmPlaying) {
+        this.playBGMWithFadeIn(safeVolume);
+      }
+    } catch (error) {
+      console.error('BGM初始化异常:', error);
+    }
+  },
+
+  /**
+   * 设置并持久化BGM音量
+   * 可在设置面板调用：this.setBGMVolume(value)
+   */
+  setBGMVolume (value, options = {}) {
+    const persist = options.persist !== false;
+    const numericValue = Number(value);
+    const safeInput = Number.isFinite(numericValue) ? numericValue : (this.data.bgmVolume || 0);
+    const vol = Math.max(0, Math.min(1, safeInput));
+
+    this.setData({
+      bgmVolume: vol,
+      bgmVolumeDisplay: Math.round(vol * 100)
+    });
+
+    if (persist) {
+      wx.setStorageSync('bgmVolume', vol);
     }
 
-    this.bgmAudioContext.onError((err) => {
-      console.warn('BGM播放失败:', err);
+    if (this.bgmAudioContext) {
+      this.bgmAudioContext.volume = vol;
+    }
+  },
+
+  /**
+   * BGM淡入播放
+   */
+  playBGMWithFadeIn (targetVolume = 0.3, duration = 1000) {
+    if (!this.bgmAudioContext) return;
+
+    this.bgmAudioContext.volume = 0;
+    this.bgmAudioContext.play().catch(err => {
+      console.warn('BGM自动播放被阻止:', err);
     });
+
+    // 渐进增加音量
+    const steps = 20;
+    const stepVolume = targetVolume / steps;
+    const stepTime = duration / steps;
+    let currentStep = 0;
+
+    const fadeInInterval = setInterval(() => {
+      currentStep++;
+      if (currentStep >= steps) {
+        this.bgmAudioContext.volume = targetVolume;
+        clearInterval(fadeInInterval);
+      } else {
+        this.bgmAudioContext.volume = stepVolume * currentStep;
+      }
+    }, stepTime);
+  },
+
+  /**
+   * BGM淡出暂停
+   */
+  pauseBGMWithFadeOut (duration = 500) {
+    if (!this.bgmAudioContext) return;
+
+    const startVolume = this.bgmAudioContext.volume;
+    const steps = 10;
+    const stepVolume = startVolume / steps;
+    const stepTime = duration / steps;
+    let currentStep = 0;
+
+    const fadeOutInterval = setInterval(() => {
+      currentStep++;
+      if (currentStep >= steps) {
+        this.bgmAudioContext.volume = 0;
+        this.bgmAudioContext.pause();
+        clearInterval(fadeOutInterval);
+      } else {
+        this.bgmAudioContext.volume = startVolume - (stepVolume * currentStep);
+      }
+    }, stepTime);
+  },
+
+  onBgmVolumeChanging (event) {
+    const value = event && event.detail ? event.detail.value : 0;
+    this.setBGMVolume(value / 100, { persist: false });
+  },
+
+  onBgmVolumeChange (event) {
+    const value = event && event.detail ? event.detail.value : 0;
+    this.setBGMVolume(value / 100, { persist: true });
+  },
+
+  /**
+   * 页面显示时，如开启BGM则淡入恢复
+   */
+  onShow () {
+    try {
+      const bgmEnabled = this.data.bgmPlaying === true || wx.getStorageSync('bgmPlaying') === true;
+      const vol = this.data.bgmVolume || wx.getStorageSync('bgmVolume') || 0.3;
+      if (bgmEnabled) {
+        this.playBGMWithFadeIn(vol);
+      }
+    } catch (e) {
+      console.warn('onShow恢复BGM失败:', e);
+    }
+  },
+
+  /**
+   * 页面隐藏时，淡出暂停BGM
+   */
+  onHide () {
+    try {
+      if (this.bgmAudioContext && (this.data.bgmPlaying === true || wx.getStorageSync('bgmPlaying') === true)) {
+        this.pauseBGMWithFadeOut();
+      }
+    } catch (e) {
+      console.warn('onHide暂停BGM失败:', e);
+    }
+  },
+
+  cleanupBGM () {
+    if (!this.bgmAudioContext) return;
+
+    try {
+      this.bgmAudioContext.stop();
+    } catch (err) {
+      console.warn('停止BGM失败:', err);
+    }
+
+    try {
+      this.bgmAudioContext.destroy();
+    } catch (err) {
+      console.warn('销毁BGM上下文失败:', err);
+    }
+
+    this.bgmAudioContext = null;
   },
 
   /**
@@ -1124,21 +1301,35 @@ Page({
    */
   toggleBGM () {
     this.closeSettingsMenu();
+
+    if (!this.bgmAudioContext) {
+      wx.showToast({
+        title: 'BGM未初始化',
+        icon: 'none'
+      });
+      return;
+    }
+
     const bgmPlaying = !this.data.bgmPlaying;
     this.setData({ bgmPlaying });
     wx.setStorageSync('bgmPlaying', bgmPlaying);
 
     if (bgmPlaying) {
-      this.bgmAudioContext.play();
+      const bgmVolume = this.data.bgmVolume || 0.3;
+      this.playBGMWithFadeIn(bgmVolume);
+
       wx.showToast({
         title: '🎵 BGM已开启',
-        icon: 'none'
+        icon: 'none',
+        duration: 1500
       });
     } else {
-      this.bgmAudioContext.pause();
+      this.pauseBGMWithFadeOut();
+
       wx.showToast({
         title: '🔇 BGM已关闭',
-        icon: 'none'
+        icon: 'none',
+        duration: 1500
       });
     }
   },
@@ -1509,7 +1700,7 @@ Page({
    */
   openBagLibrary () {
     this.setData({ showBagLibrary: true });
-    wx.hapticFeedback({ type: 'light' });
+    wx.vibrateShort({ type: 'light' });
   },
 
   /**
@@ -1536,13 +1727,18 @@ Page({
     // 切换包模型
     const success = this.bag3DRenderer.changeBagModel(modelId);
     if (success) {
-      this.setData({ currentBagModelId: modelId });
+      this.setData({
+        currentBagModelId: modelId,
+        showBagLibrary: false  // 关闭包库面板
+      });
 
       // 播放反馈音效
-      this.audioPool?.play('hit1');
+      if (this.audioPool) {
+        this.audioPool.play('/audio/switch.mp3');
+      }
 
       // 振动反馈
-      wx.hapticFeedback({ type: 'medium' });
+      wx.vibrateShort({ type: 'medium' });
 
       wx.showToast({
         title: '成功切换包款',
@@ -1576,10 +1772,7 @@ Page({
       this.particlePool = null;
     }
 
-    if (this.bgmAudioContext) {
-      this.bgmAudioContext.stop();
-      this.bgmAudioContext.destroy();
-    }
+    this.cleanupBGM();
 
     if (this.expressionTimer) {
       clearTimeout(this.expressionTimer);

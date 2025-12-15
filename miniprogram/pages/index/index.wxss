@@ -377,6 +377,31 @@ page {
   z-index: auto;
 }
 
+/* 设置菜单音量控制 */
+.settings-menu .volume-item {
+  flex-direction: column;
+  align-items: stretch;
+  padding-right: 0;
+}
+
+.volume-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.volume-header .settings-text {
+  flex: 1;
+  text-align: right;
+  padding-left: 16rpx;
+}
+
+.bgm-volume-slider {
+  width: 100%;
+  margin-top: 12rpx;
+}
+
 /* ========== 圆形分数卡片（缩小版） ========== */
 .score-circle {
   position: relative;
@@ -3642,6 +3667,7 @@ page {
 /* 包库网格 */
 .bag-lib-scroll {
   flex: 1;
+  height: 800rpx; /* 添加明确的高度 */
   padding: var(--spacing-md) 0;
 }
 

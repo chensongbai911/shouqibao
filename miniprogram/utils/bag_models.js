@@ -1,555 +1,299 @@
 /**
- * 受气包模型库 - 多种Three.js生成的包模型
- * 包含：经典包、Q弹包、刺猬包、方块包、星形包、水果包等
+ * 受气包模型库 - 仅保留哆啦A梦模型
  */
 
-/**
- * 创建经典圆形受气包
- */
-function createClassicalBag (THREE, materials) {
+function createDoraemonBag (THREE, materials) {
   const group = new THREE.Group();
-  group.name = 'classical_bag';
-
-  // 主体球体
-  const bodyGeometry = new THREE.IcosahedronGeometry(1.2, 5);
-  const body = new THREE.Mesh(bodyGeometry, materials.bagBody);
-  body.castShadow = true;
-  body.receiveShadow = true;
-  group.add(body);
-
-  // 添加表情系统的引用
-  group.bodyMesh = body;
-  return group;
-}
-
-/**
- * 创建Q弹果冻包 - 软弹感
- */
-function createJellyBag (THREE, materials) {
-  const group = new THREE.Group();
-  group.name = 'jelly_bag';
-
-  // 创建不规则的球形，用Perlin噪声参数化
-  const geometry = new THREE.IcosahedronGeometry(1.2, 6);
-  const positions = geometry.attributes.position.array;
-
-  // 添加软体感的形变
-  for (let i = 0; i < positions.length; i += 3) {
-    const x = positions[i];
-    const y = positions[i + 1];
-    const z = positions[i + 2];
-
-    const noise = Math.sin(x * 3) * Math.cos(y * 3) * Math.sin(z * 3) * 0.15;
-    const len = Math.sqrt(x * x + y * y + z * z);
-
-    positions[i] = (x / len) * (1.2 + noise);
-    positions[i + 1] = (y / len) * (1.2 + noise);
-    positions[i + 2] = (z / len) * (1.2 + noise);
-  }
-
-  geometry.attributes.position.needsUpdate = true;
-  geometry.computeVertexNormals();
-
-  // 使用玻璃材质增强果冻感
-  const jellyMaterial = materials.bagGlass.clone();
-  jellyMaterial.transparent = true;
-  jellyMaterial.opacity = 0.85;
-
-  const body = new THREE.Mesh(geometry, jellyMaterial);
-  body.castShadow = true;
-  body.receiveShadow = true;
-  group.add(body);
-
-  group.bodyMesh = body;
-  return group;
-}
-
-/**
- * 创建刺猬包 - 全身带刺
- */
-function createHedgehogBag (THREE, materials) {
-  const group = new THREE.Group();
-  group.name = 'hedgehog_bag';
-
-  // 主体
-  const bodyGeometry = new THREE.IcosahedronGeometry(1.0, 4);
-  const body = new THREE.Mesh(bodyGeometry, materials.bagBody);
-  body.castShadow = true;
-  body.receiveShadow = true;
-  group.add(body);
-
-  // 添加刺
-  const positions = bodyGeometry.attributes.position.array;
-  const spikes = [];
-
-  for (let i = 0; i < positions.length; i += 3) {
-    const x = positions[i];
-    const y = positions[i + 1];
-    const z = positions[i + 2];
-
-    const len = Math.sqrt(x * x + y * y + z * z);
-    const nx = x / len;
-    const ny = y / len;
-    const nz = z / len;
-
-    // 每个顶点上创建一个刺
-    if (Math.random() > 0.3) {
-      const spikeGeometry = new THREE.ConeGeometry(0.08, 0.5, 8);
-      const spikeMesh = new THREE.Mesh(spikeGeometry, materials.bagAccent);
-
-      // 放置在表面外侧
-      spikeMesh.position.set(
-        (nx * 1.0 + nx * 0.25),
-        (ny * 1.0 + ny * 0.25),
-        (nz * 1.0 + nz * 0.25)
-      );
-
-      // 朝向外侧
-      spikeMesh.lookAt(nx * 2, ny * 2, nz * 2);
-      spikeMesh.castShadow = true;
-      spikes.push(spikeMesh);
-      group.add(spikeMesh);
-    }
-  }
-
-  group.bodyMesh = body;
-  group.spikes = spikes;
-  return group;
-}
-
-/**
- * 创建方块包 - 立方体风格
- */
-function createCubeBag (THREE, materials) {
-  const group = new THREE.Group();
-  group.name = 'cube_bag';
-
-  // 创建圆角立方体效果（使用修改过的box geometry）
-  const geometry = new THREE.BoxGeometry(1.5, 1.5, 1.5, 16, 16, 16);
-
-  // 对顶点进行球形处理实现圆角
-  const positions = geometry.attributes.position.array;
-  for (let i = 0; i < positions.length; i += 3) {
-    let x = positions[i];
-    let y = positions[i + 1];
-    let z = positions[i + 2];
-
-    const len = Math.sqrt(x * x + y * y + z * z);
-    if (len > 0) {
-      // 介于立方体和球体之间
-      const factor = 0.7;
-      positions[i] = x * factor + (x / len) * 0.9 * (1 - factor);
-      positions[i + 1] = y * factor + (y / len) * 0.9 * (1 - factor);
-      positions[i + 2] = z * factor + (z / len) * 0.9 * (1 - factor);
-    }
-  }
-
-  geometry.attributes.position.needsUpdate = true;
-  geometry.computeVertexNormals();
-
-  const body = new THREE.Mesh(geometry, materials.bagBody);
-  body.castShadow = true;
-  body.receiveShadow = true;
-  group.add(body);
-
-  group.bodyMesh = body;
-  return group;
-}
-
-/**
- * 创建星形包 - 多角星状
- */
-function createStarBag (THREE, materials) {
-  const group = new THREE.Group();
-  group.name = 'star_bag';
-
-  // 创建基础球体
-  const baseGeometry = new THREE.IcosahedronGeometry(0.8, 4);
-  const body = new THREE.Mesh(baseGeometry, materials.bagBody);
-  body.castShadow = true;
-  body.receiveShadow = true;
-  group.add(body);
-
-  // 添加星形凸起
-  const positions = baseGeometry.attributes.position.array;
-  const starPoints = [];
-
-  for (let i = 0; i < positions.length; i += 3) {
-    const x = positions[i];
-    const y = positions[i + 1];
-    const z = positions[i + 2];
-
-    const len = Math.sqrt(x * x + y * y + z * z);
-    const nx = x / len;
-    const ny = y / len;
-    const nz = z / len;
-
-    // 每个面创建一个凸起
-    if (i % 9 === 0) {
-      const pointGeometry = new THREE.TetrahedronGeometry(0.25, 2);
-      const pointMesh = new THREE.Mesh(pointGeometry, materials.bagAccent);
-
-      pointMesh.position.set(
-        nx * 1.2,
-        ny * 1.2,
-        nz * 1.2
-      );
-
-      pointMesh.lookAt(nx * 2, ny * 2, nz * 2);
-      pointMesh.castShadow = true;
-      starPoints.push(pointMesh);
-      group.add(pointMesh);
-    }
-  }
-
-  group.bodyMesh = body;
-  group.starPoints = starPoints;
-  return group;
-}
-
-/**
- * 创建水果包 - 橙色带香蕉造型
- */
-function createFruitBag (THREE, materials) {
-  const group = new THREE.Group();
-  group.name = 'fruit_bag';
-
-  // 主体 - 橙子形状（略扁平的球体）
-  const bodyGeometry = new THREE.SphereGeometry(1.0, 32, 24);
-  const bodyMaterial = materials.bagBody.clone();
-
-  // 修改位置使其略微扁平
-  const positions = bodyGeometry.attributes.position.array;
-  for (let i = 0; i < positions.length; i += 3) {
-    positions[i + 1] *= 0.85; // 压扁Y轴
-  }
-  bodyGeometry.attributes.position.needsUpdate = true;
-
-  const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-  body.castShadow = true;
-  body.receiveShadow = true;
-  group.add(body);
-
-  // 添加柑橘纹理 - 通过小球堆积
-  const segments = 8;
-  for (let lat = 0; lat < segments; lat++) {
-    for (let lon = 0; lon < segments * 1.5; lon++) {
-      const theta = (lat / segments) * Math.PI;
-      const phi = (lon / (segments * 1.5)) * Math.PI * 2;
-
-      if (Math.random() > 0.6) {
-        const x = Math.sin(theta) * Math.cos(phi) * 1.0;
-        const y = Math.cos(theta) * 0.85;
-        const z = Math.sin(theta) * Math.sin(phi) * 1.0;
-
-        const segmentGeometry = new THREE.SphereGeometry(0.08, 8, 8);
-        const segmentMesh = new THREE.Mesh(segmentGeometry, materials.bagAccent);
-
-        segmentMesh.position.set(x, y, z);
-        segmentMesh.castShadow = true;
-        group.add(segmentMesh);
-      }
-    }
-  }
-
-  // 添加香蕉形状的装饰
-  const bananaGeometry = new THREE.CylinderGeometry(0.06, 0.06, 0.4, 12, 1);
-  const bananaMaterial = new THREE.MeshStandardMaterial({ color: 0xFFD700 });
-  const banana = new THREE.Mesh(bananaGeometry, bananaMaterial);
-
-  banana.position.set(0.6, 0.9, 0.3);
-  banana.rotation.z = Math.PI / 4;
-  banana.castShadow = true;
-  group.add(banana);
-
-  group.bodyMesh = body;
-  return group;
-}
-
-/**
- * 创建毛绒包 - 表面覆盖毛发
- */
-function createFuzzyBag (THREE, materials) {
-  const group = new THREE.Group();
-  group.name = 'fuzzy_bag';
-
-  // 主体球体
-  const bodyGeometry = new THREE.IcosahedronGeometry(1.2, 5);
-  const body = new THREE.Mesh(bodyGeometry, materials.bagBody);
-  body.castShadow = true;
-  body.receiveShadow = true;
-  group.add(body);
-
-  // 添加毛发 - 从表面发射出线段
-  const positions = bodyGeometry.attributes.position.array;
-  const hairStrands = [];
-
-  for (let i = 0; i < positions.length; i += 3) {
-    if (Math.random() > 0.7) {
-      const x = positions[i];
-      const y = positions[i + 1];
-      const z = positions[i + 2];
-
-      const len = Math.sqrt(x * x + y * y + z * z);
-      const nx = x / len;
-      const ny = y / len;
-      const nz = z / len;
-
-      // 创建毛发线段
-      const hairGeometry = new THREE.CylinderGeometry(0.02, 0.01, 0.25, 4, 1);
-      const hairMaterial = new THREE.MeshStandardMaterial({
-        color: 0xAA8866,
-        metalness: 0.1,
-        roughness: 0.8
-      });
-      const hairMesh = new THREE.Mesh(hairGeometry, hairMaterial);
-
-      hairMesh.position.set(
-        nx * 1.2,
-        ny * 1.2,
-        nz * 1.2
-      );
-
-      hairMesh.lookAt(
-        nx * 1.5,
-        ny * 1.5,
-        nz * 1.5
-      );
-
-      hairMesh.castShadow = true;
-      hairStrands.push(hairMesh);
-      group.add(hairMesh);
-    }
-  }
-
-  group.bodyMesh = body;
-  group.hairStrands = hairStrands;
-  return group;
-}
-
-/**
- * 创建结晶包 - 水晶/钻石质感
- */
-function createCrystalBag (THREE, materials) {
-  const group = new THREE.Group();
-  group.name = 'crystal_bag';
-
-  // 使用十二面体创建多面体效果
-  const bodyGeometry = new THREE.DodecahedronGeometry(1.0, 1);
-
-  // 应用玻璃/水晶材质
-  const crystalMaterial = materials.bagGlass.clone();
-  crystalMaterial.transparent = true;
-  crystalMaterial.opacity = 0.9;
-  crystalMaterial.metalness = 0.2;
-  crystalMaterial.roughness = 0.1;
-
-  const body = new THREE.Mesh(bodyGeometry, crystalMaterial);
-  body.castShadow = true;
-  body.receiveShadow = true;
-  group.add(body);
-
-  // 添加内部晶体结构 - 发光的线框
-  const edges = new THREE.EdgesGeometry(bodyGeometry);
-  const wireframe = new THREE.LineSegments(
-    edges,
-    new THREE.LineBasicMaterial({ color: 0x00FFFF, linewidth: 2 })
-  );
-  group.add(wireframe);
-
-  group.bodyMesh = body;
-  group.wireframe = wireframe;
-  return group;
-}
-
-/**
- * 创建火焰包 - 表面带有火焰效果
- */
-function createFlameBag (THREE, materials) {
-  const group = new THREE.Group();
-  group.name = 'flame_bag';
-
-  // 主体
-  const bodyGeometry = new THREE.IcosahedronGeometry(1.1, 5);
-  const body = new THREE.Mesh(bodyGeometry, materials.bagBody);
-  body.castShadow = true;
-  body.receiveShadow = true;
-  group.add(body);
-
-  // 添加火焰形状的凸起
-  const flameCount = 12;
-  const flames = [];
-
-  for (let i = 0; i < flameCount; i++) {
-    const angle = (i / flameCount) * Math.PI * 2;
-    const height = Math.random() * 0.6 + 0.4;
-
-    // 火焰形状 - 圆锥+球体组合
-    const flameGroup = new THREE.Group();
-
-    const coneGeometry = new THREE.ConeGeometry(0.15, 0.5, 8);
-    const flameMaterial = new THREE.MeshStandardMaterial({
-      color: Math.random() > 0.5 ? 0xFF6B00 : 0xFFDD00,
-      emissive: 0xFF4400,
-      emissiveIntensity: 0.8,
-      metalness: 0,
-      roughness: 0.4
-    });
-    const cone = new THREE.Mesh(coneGeometry, flameMaterial);
-    flameGroup.add(cone);
-
-    flameGroup.position.set(
-      Math.cos(angle) * 1.3,
-      Math.sin(angle * 0.7) * 0.5,
-      Math.sin(angle) * 1.3
-    );
-
-    flameGroup.castShadow = true;
-    flames.push(flameGroup);
-    group.add(flameGroup);
-  }
-
-  group.bodyMesh = body;
-  group.flames = flames;
-  return group;
-}
-
-/**
- * 创建金属包 - 金属质感
- */
-function createMetalBag (THREE, materials) {
-  const group = new THREE.Group();
-  group.name = 'metal_bag';
-
-  const bodyGeometry = new THREE.IcosahedronGeometry(1.2, 6);
-
-  const metalMaterial = new THREE.MeshStandardMaterial({
-    color: 0xC0C0C0,
-    metalness: 0.95,
-    roughness: 0.1,
-    envMap: null
+  group.name = 'doraemon_bag';
+
+  // 材质定义 - 颜色优化
+  const blueMaterial = new THREE.MeshStandardMaterial({
+    color: 0x0095D9, // 哆啦A梦官方蓝
+    roughness: 0.4,
+    metalness: 0.1
   });
 
-  const body = new THREE.Mesh(bodyGeometry, metalMaterial);
-  body.castShadow = true;
-  body.receiveShadow = true;
-  group.add(body);
+  const whiteMaterial = new THREE.MeshStandardMaterial({
+    color: 0xFFFFFF,
+    roughness: 0.4,
+    metalness: 0.1
+  });
 
-  // 添加金属条纹
-  const positions = bodyGeometry.attributes.position.array;
-  for (let i = 0; i < positions.length; i += 3) {
-    if (i % 30 === 0) {
-      const x = positions[i];
-      const y = positions[i + 1];
-      const z = positions[i + 2];
+  const redMaterial = new THREE.MeshStandardMaterial({
+    color: 0xD90000,
+    roughness: 0.3,
+    metalness: 0.1
+  });
 
-      const len = Math.sqrt(x * x + y * y + z * z);
+  const yellowMaterial = new THREE.MeshStandardMaterial({
+    color: 0xFFD700,
+    roughness: 0.3,
+    metalness: 0.4
+  });
 
-      const stripGeometry = new THREE.BoxGeometry(0.05, 0.8, 0.05);
-      const stripMaterial = new THREE.MeshStandardMaterial({
-        color: 0x888888,
-        metalness: 0.8,
-        roughness: 0.2
-      });
-      const strip = new THREE.Mesh(stripGeometry, stripMaterial);
+  const blackMaterial = new THREE.MeshBasicMaterial({
+    color: 0x000000
+  });
 
-      strip.position.set(x * 1.2, y * 1.2, z * 1.2);
-      strip.lookAt(0, 0, 0);
-      strip.castShadow = true;
-      group.add(strip);
-    }
-  }
+  // --- 头部 ---
+  const headGroup = new THREE.Group();
+  group.add(headGroup);
 
-  group.bodyMesh = body;
-  return group;
+  // 蓝头 - 稍微大一点
+  const headGeo = new THREE.SphereGeometry(1.5, 32, 32);
+  const head = new THREE.Mesh(headGeo, blueMaterial);
+  head.position.y = 1.2;
+  head.castShadow = false;
+  headGroup.add(head);
+
+  // 设为主要受击Mesh
+  group.bodyMesh = head;
+
+  // 白脸 - 调整位置和大小
+  const faceGeo = new THREE.SphereGeometry(1.25, 32, 32);
+  const face = new THREE.Mesh(faceGeo, whiteMaterial);
+  face.scale.set(1, 0.9, 0.85);
+  face.position.set(0, 1.1, 0.45);
+  face.rotation.x = -0.15;
+  headGroup.add(face);
+
+  // --- 眼睛 ---
+  // 眼睛组
+  const eyeGroup = new THREE.Group();
+  headGroup.add(eyeGroup);
+
+  const eyeGeo = new THREE.SphereGeometry(0.38, 24, 24);
+
+  // 左眼容器 (用于动画控制)
+  const leftEyeContainer = new THREE.Group();
+  leftEyeContainer.position.set(-0.38, 2.25, 1.25);
+  eyeGroup.add(leftEyeContainer);
+
+  // 左眼网格 - 竖直椭圆
+  const leftEye = new THREE.Mesh(eyeGeo, whiteMaterial);
+  leftEye.scale.set(1, 1.35, 0.6);
+  leftEye.rotation.x = -0.1;
+  leftEye.rotation.z = 0.05;
+  leftEyeContainer.add(leftEye);
+
+  // 右眼容器
+  const rightEyeContainer = new THREE.Group();
+  rightEyeContainer.position.set(0.38, 2.25, 1.25);
+  eyeGroup.add(rightEyeContainer);
+
+  // 右眼网格
+  const rightEye = new THREE.Mesh(eyeGeo, whiteMaterial);
+  rightEye.scale.set(1, 1.35, 0.6);
+  rightEye.rotation.x = -0.1;
+  rightEye.rotation.z = -0.05;
+  rightEyeContainer.add(rightEye);
+
+  // 瞳孔 - 稍微靠内斗鸡眼一点点更可爱
+  const pupilGeo = new THREE.SphereGeometry(0.09, 12, 12);
+  const highlightGeo = new THREE.SphereGeometry(0.03, 8, 8); // 眼神光
+
+  // 左眼瞳孔
+  const leftPupil = new THREE.Mesh(pupilGeo, blackMaterial);
+  leftPupil.scale.set(1, 1, 0.5);
+  leftPupil.position.set(0.12, 0.1, 0.32);
+  leftEye.add(leftPupil);
+
+  // 左眼高光
+  const leftHighlight = new THREE.Mesh(highlightGeo, whiteMaterial);
+  leftHighlight.position.set(0.03, 0.03, 0.08);
+  leftPupil.add(leftHighlight);
+
+  // 右眼瞳孔
+  const rightPupil = new THREE.Mesh(pupilGeo, blackMaterial);
+  rightPupil.scale.set(1, 1, 0.5);
+  rightPupil.position.set(-0.12, 0.1, 0.32);
+  rightEye.add(rightPupil);
+
+  // 右眼高光
+  const rightHighlight = new THREE.Mesh(highlightGeo, whiteMaterial);
+  rightHighlight.position.set(-0.03, 0.03, 0.08);
+  rightPupil.add(rightHighlight);
+
+  // 暴露给 bag_3d.js 使用的是容器
+  group.userData.eyeLeft = leftEyeContainer;
+  group.userData.eyeRight = rightEyeContainer;
+
+  // --- 鼻子 ---
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 16), redMaterial);
+  nose.position.set(0, 1.95, 1.55);
+  nose.castShadow = false;
+  headGroup.add(nose);
+
+  // 鼻子高光
+  const noseHighlight = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), whiteMaterial);
+  noseHighlight.position.set(0.08, 2.05, 1.68);
+  headGroup.add(noseHighlight);
+
+  // --- 胡须 ---
+  const whiskerGeo = new THREE.CylinderGeometry(0.012, 0.012, 0.9, 6);
+  const whiskerY = [1.8, 1.7, 1.6];
+
+  whiskerY.forEach((y, i) => {
+    const angle = (i - 1) * 0.15;
+
+    // 左胡须
+    const l = new THREE.Mesh(whiskerGeo, blackMaterial);
+    l.position.set(-0.7, y, 1.35);
+    l.rotation.z = Math.PI / 2 + angle;
+    l.rotation.y = 0.25;
+    headGroup.add(l);
+
+    // 右胡须
+    const r = new THREE.Mesh(whiskerGeo, blackMaterial);
+    r.position.set(0.7, y, 1.35);
+    r.rotation.z = Math.PI / 2 - angle;
+    r.rotation.y = -0.25;
+    headGroup.add(r);
+  });
+
+  // --- 嘴巴 (垂直线) ---
+  const mouthLine = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.7, 8), blackMaterial);
+  mouthLine.position.set(0, 1.5, 1.48);
+  headGroup.add(mouthLine);
+
+  // 微笑嘴型 (使用Torus的一部分)
+  const smileGeo = new THREE.TorusGeometry(0.7, 0.018, 8, 32, Math.PI);
+  const smile = new THREE.Mesh(smileGeo, blackMaterial);
+  smile.position.set(0, 1.5, 1.4);
+  smile.rotation.x = Math.PI / 1.15; // 稍微倾斜贴合脸部
+  headGroup.add(smile);
+
+  // --- 身体 ---
+  const bodyGroup = new THREE.Group();
+  group.add(bodyGroup);
+
+  // 躯干 - 稍微胖一点
+  const bodyGeo = new THREE.CylinderGeometry(1.2, 1.2, 1.5, 32);
+  const body = new THREE.Mesh(bodyGeo, blueMaterial);
+  body.position.y = -0.1;
+  body.castShadow = false;
+  bodyGroup.add(body);
+
+  // 肚皮
+  const bellyGeo = new THREE.SphereGeometry(1.0, 32, 32);
+  const belly = new THREE.Mesh(bellyGeo, whiteMaterial);
+  belly.scale.set(1, 1.1, 0.6);
+  belly.position.set(0, -0.2, 0.7);
+  bodyGroup.add(belly);
+
+  // 口袋 (半圆)
+  const pocketGeo = new THREE.CircleGeometry(0.7, 24, 0, Math.PI);
+  const pocket = new THREE.Mesh(pocketGeo, whiteMaterial);
+  pocket.position.set(0, -0.2, 1.25);
+  pocket.rotation.z = Math.PI; // 开口向上
+
+  const pocketBorder = new THREE.Mesh(new THREE.TorusGeometry(0.7, 0.015, 8, 24, Math.PI), blackMaterial);
+  pocketBorder.position.set(0, -0.2, 1.25);
+  pocketBorder.rotation.z = Math.PI;
+  bodyGroup.add(pocketBorder);
+  bodyGroup.add(pocket);
+
+  // --- 项圈和铃铛 ---
+  const collar = new THREE.Mesh(new THREE.TorusGeometry(1.15, 0.12, 12, 32), redMaterial);
+  collar.rotation.x = Math.PI / 2;
+  collar.position.y = 0.6;
+  group.add(collar);
+
+  const bell = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), yellowMaterial);
+  bell.position.set(0, 0.35, 1.25);
+  bell.castShadow = false;
+  group.add(bell);
+
+  // 铃铛细节
+  const bellHole = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), blackMaterial);
+  bellHole.position.set(0, 0.25, 1.48);
+  group.add(bellHole);
+
+  const bellLine = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.18, 6), blackMaterial);
+  bellLine.position.set(0, 0.15, 1.45);
+  bellLine.rotation.x = Math.PI / 2;
+  group.add(bellLine);
+
+  // --- 手臂 ---
+  const armGeo = new THREE.CylinderGeometry(0.28, 0.28, 0.7, 16);
+  const handGeo = new THREE.SphereGeometry(0.4, 16, 16);
+
+  // 左臂
+  const leftArmGroup = new THREE.Group();
+  leftArmGroup.position.set(-1.15, 0.3, 0); // 稍微降低一点
+  leftArmGroup.rotation.z = Math.PI / 6; // 角度减小，更自然下垂
+
+  const leftArm = new THREE.Mesh(armGeo, blueMaterial);
+  leftArm.position.y = -0.35;
+  leftArmGroup.add(leftArm);
+
+  const leftHand = new THREE.Mesh(handGeo, whiteMaterial);
+  leftHand.position.y = -0.7;
+  leftArmGroup.add(leftHand);
+
+  group.add(leftArmGroup);
+
+  // 右臂
+  const rightArmGroup = new THREE.Group();
+  rightArmGroup.position.set(1.15, 0.3, 0);
+  rightArmGroup.rotation.z = -Math.PI / 6;
+
+  const rightArm = new THREE.Mesh(armGeo, blueMaterial);
+  rightArm.position.y = -0.35;
+  rightArmGroup.add(rightArm);
+
+  const rightHand = new THREE.Mesh(handGeo, whiteMaterial);
+  rightHand.position.y = -0.7;
+  rightArmGroup.add(rightHand);
+
+  group.add(rightArmGroup);
+
+  // --- 腿脚 ---
+  const legGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.5, 16);
+  // 稍微圆润一点的脚，用Sphere拉伸模拟
+  const roundFootGeo = new THREE.SphereGeometry(0.5, 16, 16);
+
+  // 左腿
+  const leftLeg = new THREE.Mesh(legGeo, blueMaterial);
+  leftLeg.position.set(-0.55, -1.0, 0);
+  group.add(leftLeg);
+
+  const leftFoot = new THREE.Mesh(roundFootGeo, whiteMaterial);
+  leftFoot.scale.set(0.9, 0.5, 1.3); // 稍微加厚一点，更像图片里的圆润感
+  leftFoot.position.set(-0.55, -1.35, 0.15);
+  group.add(leftFoot);
+
+  // 右腿
+  const rightLeg = new THREE.Mesh(legGeo, blueMaterial);
+  rightLeg.position.set(0.55, -1.0, 0);
+  group.add(rightLeg);
+
+  const rightFoot = new THREE.Mesh(roundFootGeo, whiteMaterial);
+  rightFoot.scale.set(0.9, 0.5, 1.3);
+  rightFoot.position.set(0.55, -1.35, 0.15);
+  group.add(rightFoot);
+
+  // --- 尾巴 ---
+  const tailGeo = new THREE.SphereGeometry(0.25, 16, 16);
+  const tail = new THREE.Mesh(tailGeo, redMaterial);
+  tail.position.set(0, -0.8, -1.3);
+  group.add(tail); return group;
 }
 
 /**
  * 包模型定义表
  */
 const BAG_MODELS = {
-  classical: {
-    id: 'classical',
-    name: '经典圆形包',
-    description: '经典的圆形受气包，圆润可爱',
-    rarity: 'common',
-    creator: createClassicalBag
-  },
-  jelly: {
-    id: 'jelly',
-    name: 'Q弹果冻包',
-    description: '软弹感果冻体质，QQ软软',
-    rarity: 'common',
-    creator: createJellyBag
-  },
-  hedgehog: {
-    id: 'hedgehog',
-    name: '刺猬包',
-    description: '全身带刺，气势十足',
-    rarity: 'uncommon',
-    creator: createHedgehogBag
-  },
-  cube: {
-    id: 'cube',
-    name: '方块包',
-    description: '立方体风格，方正有力',
-    rarity: 'uncommon',
-    creator: createCubeBag
-  },
-  star: {
-    id: 'star',
-    name: '星形包',
-    description: '多角星状，闪闪发光',
-    rarity: 'rare',
-    creator: createStarBag
-  },
-  fruit: {
-    id: 'fruit',
-    name: '水果包',
-    description: '橙子形状，香甜多汁',
-    rarity: 'rare',
-    creator: createFruitBag
-  },
-  fuzzy: {
-    id: 'fuzzy',
-    name: '毛绒包',
-    description: '毛茸茸的，柔软舒适',
-    rarity: 'epic',
-    creator: createFuzzyBag
-  },
-  crystal: {
-    id: 'crystal',
-    name: '结晶包',
-    description: '水晶钻石质感，闪耀夺目',
-    rarity: 'epic',
-    creator: createCrystalBag
-  },
-  flame: {
-    id: 'flame',
-    name: '火焰包',
-    description: '熊熊烈火，怒火涛涛',
+  doraemon: {
+    id: 'doraemon',
+    name: '哆啦A梦包',
+    description: '经典蓝胖猫造型，满满童年记忆',
     rarity: 'legendary',
-    creator: createFlameBag
-  },
-  metal: {
-    id: 'metal',
-    name: '金属包',
-    description: '坚硬金属质感，刚毅有力',
-    rarity: 'legendary',
-    creator: createMetalBag
+    creator: createDoraemonBag
   }
 };
 
 module.exports = {
   BAG_MODELS,
-  createClassicalBag,
-  createJellyBag,
-  createHedgehogBag,
-  createCubeBag,
-  createStarBag,
-  createFruitBag,
-  createFuzzyBag,
-  createCrystalBag,
-  createFlameBag,
-  createMetalBag
+  createDoraemonBag
 };
